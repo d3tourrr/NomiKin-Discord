@@ -116,16 +116,32 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
             companionReply := ""
             err = nil
 
+            // set the typing indicator
+            stopTyping := make(chan bool)
+            go func() {
+                for {
+                    select {
+                    case <-stopTyping:
+                        return
+                    default:
+                        s.ChannelTyping(m.ChannelID)
+                        time.Sleep(5 * time.Second) // Adjust the interval as needed
+                    }
+                }
+            }()
+
             switch companionType {
-                case "NOMI":
+            case "NOMI":
                 companionReply, err = nomikin.SendNomiMessage(&updatedMessage)
-                case "KINDROID":
+            case "KINDROID":
                 companionReply, err = nomikin.SendKindroidMessage(&updatedMessage)
             }
             if err != nil {
                 fmt.Printf("Error exchanging messages with companion: %v", err)
                 return nil
             }
+
+            stopTyping <- true
 
             // Send as a reply to the message that triggered the response, helps keep things orderly
             _, sendErr := s.ChannelMessageSendReply(m.ChannelID, companionReply, m.Reference())
