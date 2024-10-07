@@ -87,8 +87,8 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
     }
 
     // Is the companion mentioned by role
-    if strings.ToUpper(os.Getenv("RESPOND_TO_ROLE_PING")) == "TRUE" && !respondToThis {
-        // Check this every time in case the bot is added to or removed from roles
+    if strings.ToUpper(os.Getenv("RESPOND_TO_ROLE_PING")) == "TRUE" && !respondToThis && m.GuildID != "" {
+        // Check this every time in case the bot is added to or removed from roles, not in DMs
         botID := s.State.User.ID
 
         botMember, err := s.GuildMember(m.GuildID, botID)
