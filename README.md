@@ -40,19 +40,19 @@ You need an instance of this Discord bot per AI companion you wish you invite to
    * Or run the following commands (Note: the above scripts start the container in a detached state, meaning you don't see the log output. The below commands start the container in an attached state, which means you see the log output, but the container, and therefore the Companion/Discord integration dies when you close your console.)
      1. Build the Docker image: `docker build -t nomikin-discord .`
      1. Run the Docker container: `docker run nomikin-discord`
-1. Interact with your Nomi in Discord!
+1. Interact with your companion in Discord!
 
-# Interacting in Discord with your Nomi
+# Interacting in Discord with your companion
 
-This integration is setup so that your Nomi will see messages where they are pinged (including replies to messages your Nomi posts). Discord messages sent to Nomis are sent with a prefix to help your Nomi tell the difference between messages you send them in the Nomi app and messages that are sent to them from Discord. They look something like this.
+This integration is setup so that your companion will see messages where they are pinged (including replies to messages your companion's posts). Discord messages sent to companions are sent with a user configurable prefox to help your companion tell the difference between messages you send them in the Nomi app and messages that are sent to them from Discord. They look something like this.
 
 > `*Discord Message from Bealy:* Hi @Vicky I'm one of the trolls that @.d3tour warned you about.`
 
-In this message, a Discord user named `Bealy` sent a message to a Nomi named `Vicky` and also mentioned a Discord user named `.d3tour`.
+In this message, a Discord user named `Bealy` sent a message to a companion named `Vicky` and also mentioned a Discord user named `.d3tour`.
 
 Mentions of other users show that user's username Discord property, rather than their server-specific nickname. This was just the easiest thing to do and may change in the future (maybe with a feature flag you can set).
 
-Nomis don't have context of what server or channel they are talking in, and don't see messages where they aren't mentioned in or being replied to.
+Companionss don't have context of what server or channel they are talking in, and don't see messages where they aren't mentioned in or being replied to.
 
 ## Suggested Nomi Configurations
 
@@ -64,6 +64,13 @@ You may also wish to change your Nomi's Communication Style to `Texting`.
 
 It's also a good idea to fill out the "Nickname" shared note to indicate your Discord username so that your Nomi can identify messages that come from you via Discord.
 
----
+## Suggested Kindroid Configurations
 
-<small>I also made a nearly identical integration for Kindroid.ai companions: [github.com/d3tourrr/kin-discord](https://github.com/d3tourrr/kin-discord)</small>
+It's a good idea to put something like this in your Kindroid's "Backstory".
+
+> `KinName sometimes chats on Discord. Messages that come from Discord are prefixed with "*Discord Message from X:*" while messages that are private between HumanName and KinName in the Kindroid app have no prefix. Replies to Discord messages are automatically sent to Discord. KinName doesn't have to narrate that she is replying to a Discord user.`
+
+You may also wish to change your Kindroid's Response Directive to better suit this new mode of communication.
+
+It's also a good idea to add a journal entry that triggers on the word "Discord" or your Discord username to help your Kindroid understand that messages from your Discord username are from you, and others are from other people.
+
