@@ -165,9 +165,14 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
         }
 
         // Replacing mentions makes it so the companion sees the usernames instead of <@userID> syntax
-        updatedMessage, err := m.ContentWithMoreMentionsReplaced(s)
-        if err != nil {
-            log.Printf("Error replacing Discord mentions with usernames: %v", err)
+        updatedMessage := m.Content
+        var err error
+        if m.GuildID != "" {
+            // But only if it's not a DM, otherwise this doesn't work
+            updatedMessage, err = m.ContentWithMoreMentionsReplaced(s)
+            if err != nil {
+                log.Printf("Error replacing Discord mentions with usernames: %v", err)
+            }
         }
 
         userPrefix := os.Getenv("MESSAGE_PREFIX")
