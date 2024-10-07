@@ -258,7 +258,6 @@ func main() {
     }
 
     // For keyword triggering
-    // dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentMessageContent | discordgo.IntentsGuilds | discordgo.IntentsGuildMembers
     dg.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
 
     dg.AddHandler(messageCreate)
