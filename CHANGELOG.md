@@ -1,7 +1,7 @@
 # Changelog
 
 ## v0.4
-* **BREAKING** Bot needs the `Message Content Intent` permission
+* **⚠️BREAKING⚠️** Bot needs the `Message Content Intent` permission
   * In the Discord Developer Portal select your bot and navigate to the `Bot` page. Scroll down and toggle on `Message Content Intent`.
 * `RESPOND_TO_ROLE_PING` environment variable toggles whether your companion will respond when a role it has is pinged
 * `RESPOND_TO_DIRECT_MESSAGE` environment variable toggles whether your companion will respond to DMs
