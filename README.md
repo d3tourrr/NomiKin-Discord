@@ -13,6 +13,7 @@ You need an instance of this Discord bot per AI companion you wish you invite to
    1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and sign in with your Discord account.
    1. Create a new application and then a bot under that application. It's a good idea to use the name of your companion and an appropriate avatar.
    1. Copy the bot's token from the `Bot` page, under the `Token` section. You may need to reset the token to see it. This token is a **SECRET**, do not share it with anyone.
+      * ⚠️ While you're on the `Bot` page, you must enable `Message Content Intent` or your companion will not be able to connect to Discord. (This is a new change to support responding to messages with certain keywords.)
    1. Add the bot to a server with the required permissions (at least "Read Messages" and "Send Messages")
       1. Go to the `Oauth2` page
       1. Under `Scopes` select `Bot`
@@ -35,6 +36,9 @@ You need an instance of this Discord bot per AI companion you wish you invite to
 1. Setup your environment variables 
    1. Make a copy of the `env.example` file and name it `.env` (deleting the `.example` suffix)
    1. Add the values you gathered above on the right-hand side of the equals sign in the place they go
+   1. Set your optional message prefix - leading text that is sent to every message your companion receives to help them differentiate between Discord messages and messages sent within the Nomi or Kindroid app
+   1. Set `RESPOND_TO_ROLE_PING` and `RESPOND_TO_DIRECT_MESSAGE` to `FALSE` if you don't want your companion to respond to DMs or when a role they have is pinged
+   1. Set a comma separated list of keywords that will trigger your companion to respond, even if the message doesn't ping them, like their name (ex: `breakfast, bears` - your companion will reply to any message that contains the words "breakfast" or "bears")
 1. Build and run the Docker container
    * Run either `start-windows-companion.ps1` on Windows (or in PowerShell) or `start-linux-companion.sh` on Linux (or in Bash, including Git Bash)
    * Or run the following commands (Note: the above scripts start the container in a detached state, meaning you don't see the log output. The below commands start the container in an attached state, which means you see the log output, but the container, and therefore the Companion/Discord integration dies when you close your console.)
