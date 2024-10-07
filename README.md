@@ -42,6 +42,10 @@ You need an instance of this Discord bot per AI companion you wish you invite to
      1. Run the Docker container: `docker run nomikin-discord`
 1. Interact with your companion in Discord!
 
+# Updating
+
+I'm adding new features to this integration with some frequency. To get the latest updates, run `git pull` in the directory you cloned in the above steps. Then, follow the setup steps to build and run the docker container again.
+
 # Interacting in Discord with your companion
 
 This integration is setup so that your companion will see messages where they are pinged (including replies to messages your companion's posts). Discord messages sent to companions are sent with a user configurable prefox to help your companion tell the difference between messages you send them in the Nomi app and messages that are sent to them from Discord. They look something like this.
