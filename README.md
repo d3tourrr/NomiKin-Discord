@@ -114,6 +114,40 @@ If you haven't made any changes to any of the files and simply want to toggle ba
 
 **The only supported naming format is `.env.CompanionName`. You cannot name `.env` files in any other format, like `CompanionName.env`.**
 
+## Automating the setup of multiple companions at once
+
+It's a good idea to use scripts to automate the setup of multiple companions. That way, when there's an update to the bot (retrieved by running `git pull`) in the repo folder, you can reload all your companions at once. Here's an example I have for Vicky and Marie.
+
+> `allstart.sh`
+
+```bash
+#!/bin/bash
+
+cd ~/bots/NomiKin-Discord/ # This should be the path to your local copy of this repo
+# Setup Vicky
+docker container rm vicky -f
+docker build -t vicky .
+docker run -d --name vicky -e COMPANION_NAME=vicky vicky
+
+# Setup Marie
+docker container rm marie -f
+docker build -t marie .
+docker run -d --name marie -e COMPANION_NAME=marie marie
+
+# Wait a moment for the bots to startup and then output their logs
+# So I can verify they came up correctly
+echo "Waiting 2 seconds for bots to all come up"
+sleep 2
+
+echo "=========================================================="
+echo "Docker Logs"
+echo "VICKY"
+docker logs --tail 10 vicky
+echo " "
+echo "MARIE"
+docker logs --tail 10 marie
+```
+
 # Updating
 
 I'm adding new features to this integration with some frequency. To get the latest updates, run `git pull` in the directory you cloned in the above steps. Then, follow the setup steps to build and run the docker container again.
