@@ -71,6 +71,7 @@ The helper scripts essentially just wrap a couple of Docker commands. If you'd p
 #### Build the Docker images
 
 `docker build -t vicky .`
+
 `docker build -t marie .`
 
 These two commands give me Docker images named `vicky` and `marie` that I can then go on and run.
@@ -78,6 +79,7 @@ These two commands give me Docker images named `vicky` and `marie` that I can th
 #### Run the Docker containers
 
 `docker run -d --name vicky -e COMPANION_NAME=vicky vicky`
+
 `docker run -d --name marie -e COMPANION_NAME=marie marie`
 
 Now I have both companions up and running.
@@ -109,6 +111,8 @@ or
 In both run commands, the only difference is the value given to `COMPANION_NAME`, which matches the `.env` file suffixes I described above.
 
 If you haven't made any changes to any of the files and simply want to toggle back and forth between different configurations, you can run the `docker container rm` and `docker run` commands, omitting the `docker build` command. But if you change anything in the `.env` files, you'll have to `docker build` again.
+
+**The only supported naming format is `.env.CompanionName`. You cannot name `.env` files in any other format, like `CompanionName.env`.**
 
 # Updating
 
