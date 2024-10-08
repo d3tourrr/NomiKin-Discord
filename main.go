@@ -17,7 +17,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.4"
+var version = "v0.5"
 
 func contains(slice []string, item string) bool {
     for _, s := range slice {
@@ -28,6 +28,7 @@ func contains(slice []string, item string) bool {
     return false
 }
 
+// Message queueing
 type QueuedMessage struct {
     Message   *discordgo.MessageCreate
     Session   *discordgo.Session
@@ -75,6 +76,7 @@ func (q *MessageQueue) ProcessMessages() {
     }
 }
 
+// Message formatting and handling
 func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
     respondToThis := false
 
@@ -87,6 +89,7 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
     }
 
     // Is the companion mentioned by role
+    // Doesn't work in DMs, no need to check if the bot is also mentioned specifically
     if strings.ToUpper(os.Getenv("RESPOND_TO_ROLE_PING")) == "TRUE" && !respondToThis && m.GuildID != "" {
         // Check this every time in case the bot is added to or removed from roles, not in DMs
         botID := s.State.User.ID
@@ -128,9 +131,9 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
 
     // Is this a DM?
     respondToDM := strings.ToUpper(os.Getenv("RESPOND_TO_DIRECT_MESSAGE"))
-
     if m.GuildID == "" {
-        // If this is a DM, respond if RESPOND_TO_DIRECT_MESSAGE is true, ignore if it's false, and leave `respondToThis` at it's normal value otherwise
+        // If this is a DM, respond if RESPOND_TO_DIRECT_MESSAGE is true, ignore if it's false,
+        // and leave `respondToThis` at it's normal value otherwise - still respond if pinged/keyword
         switch respondToDM {
             case "TRUE":
             respondToThis = true
@@ -168,21 +171,22 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
         updatedMessage := m.Content
         var err error
         if m.GuildID != "" {
-            // But only if it's not a DM, otherwise this doesn't work
+            // But only if it's not a DM, otherwise this doesn't work - apparently this needs guild state info
             updatedMessage, err = m.ContentWithMoreMentionsReplaced(s)
             if err != nil {
                 log.Printf("Error replacing Discord mentions with usernames: %v", err)
             }
         }
 
+        // Add the message prefix if one exists, substitute sender username
         userPrefix := os.Getenv("MESSAGE_PREFIX")
-
         if userPrefix != "" {
             re := regexp.MustCompile(`\{\{USERNAME\}\}`)
             userPrefix = re.ReplaceAllString(userPrefix, m.Author.Username)
             updatedMessage = userPrefix + " " + updatedMessage
         }
 
+        // Construct the NomiKin obj and send the message
         nomikin := NomiKin.NomiKin {
             ApiKey: companionToken,
             CompanionId: companionId,
@@ -223,6 +227,7 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
         if sendErr != nil {
             fmt.Println("Error sending message: ", err)
         }
+
         return nil
     }
 
@@ -230,7 +235,6 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-    // Ignore messages from the bot itself
     if m.Author.ID == s.State.User.ID {
         return
     }
@@ -246,9 +250,27 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 var queue MessageQueue
 
 func main() {
-    err := godotenv.Load()
-    if err != nil {
-        log.Printf("Error loading .env file - hopefully environment variables are set another way: %v", err)
+    // Support for multiple .env files named .env.companionName
+    namedEnvFile := false
+    companionName := os.Getenv("COMPANION_NAME")
+    if companionName != "" {
+        namedEnvFile = true
+        err := godotenv.Load(".env." + companionName)
+        if err != nil {
+            namedEnvFile = false
+            log.Printf("Error loading .env.%v file: %v", companionName, err)
+        } else {
+            log.Printf("Loaded env file: .env.%v", companionName)
+        }
+    }
+    if !namedEnvFile {
+        // Fall back to .env file if there's no .env.companionName
+        err := godotenv.Load()
+        if err != nil {
+            log.Printf("Error loading .env file: %v", err)
+        } else {
+            log.Printf("Loaded env file: .env")
+        }
     }
 
     botToken := os.Getenv("DISCORD_BOT_TOKEN")
@@ -272,6 +294,7 @@ func main() {
         log.Fatalf("Error opening Discord connection: %v", err)
     }
 
+    // Set bot online/custom status
     statusMessageLocation := "https://raw.githubusercontent.com/d3tourrr/NomiKin-Discord/refs/heads/main/StatusMessage.txt"
     statusResp, err := http.Get(statusMessageLocation)
     if err != nil {
@@ -298,6 +321,7 @@ func main() {
         log.Println("Status update successful")
     }
 
+    // Kick off message processing
     go queue.ProcessMessages()
 
     fmt.Println("Bot is now running. Press CTRL+C to exit.")

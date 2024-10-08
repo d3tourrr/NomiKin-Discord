@@ -7,4 +7,5 @@
 *.out
 go.work
 go.work.sum
-.env
+.env*
+!.env.example

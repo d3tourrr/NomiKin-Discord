@@ -10,4 +10,4 @@ if (-not [string]::IsNullOrWhiteSpace($inputName)) {$companionName = $inputName}
 
 docker container rm $companionName -f
 docker build -t $companionName $psscriptroot
-docker run -d --name $companionName $companionName
+docker run -d --name $companionName -e COMPANION_NAME=$companionName $companionName

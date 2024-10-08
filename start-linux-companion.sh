@@ -13,4 +13,4 @@ fi
 scriptroot="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 docker container rm $companionName -f
 docker build -t $companionName $scriptroot
-docker run -d --name $companionName $companionName
+docker run -d --name $companionName -e COMPANION_NAME=$companionName $companionName

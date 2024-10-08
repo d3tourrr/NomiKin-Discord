@@ -28,7 +28,6 @@ You need an instance of this Discord bot per AI companion you wish you invite to
      * Go to the [Integration section](https://beta.nomi.ai/profile/integrations) of the Profile tab
      * Copy your API key
      * Go to the View Nomi Information page for your Nomi and scroll to the very bottom and copy the Nomi ID
-     * Or see [Nomi API Doc: Listing your Nomis](https://api.nomi.ai/docs/#listing-your-nomis)
    * **FOR KINDROID**
      * Open the side bar while chatting with a Kindroid and click General, then scroll to the bottom and expand API & advanced integration
      * Copy your API key
@@ -45,6 +44,71 @@ You need an instance of this Discord bot per AI companion you wish you invite to
      1. Build the Docker image: `docker build -t nomikin-discord .`
      1. Run the Docker container: `docker run nomikin-discord`
 1. Interact with your companion in Discord!
+
+# Running multiple companions at once
+
+Companions all run in their own isolated Docker containers. To run more than one companion at once, this integration supports having multiple `.env` files. These `.env` files have to follow a specific naming scheme: `.env.CompanionName`. You can provide this `CompanionName` portion when starting the Docker container for your companion.
+
+## Example
+
+I have a Nomi named Vicky and a Kindroid named Marie, and I'd like to chat with them both in Discord. I still need to do all the steps up until `Setup your environment variables` in the above section for each companion. Each companion needs its own Discord Application and Bot, and each companion will have its own Nomi or Kindroid ID. You only need to clone this repo once, though. Now, let's pick up the instructions after having gathered all of the data that goes in a `.env` file.
+
+### Setup multiple `.env` files
+
+1. Create two copies of `.env.example` named `.env.vicky` and `.env.marie`. 
+1. Populate each file with the appropriate values you gathered from the Discord Developer Portal and the Nomi/Kindroid apps. Set the other configurations as you desire for each companion.
+
+### Starting the integration with the helper scripts
+
+Both `start-linux-companion.sh` and `start-windows-companion.ps1` function the same way. They prompt you for a "Companion Name" and then execute some commands to build and run the Docker container for your companion. When using multiple `.env` files, however, the name you provide must match the suffix you give the `.env` file. For instance, when I run the helper script to start up the Docker container for Vicky, I must provide the name `vicky` in order to match the name of the `.env.vicky` file. Similarly, when I start up the container for Marie, I have to provide the name `marie` to match the `.env.marie` file.
+
+If you give a name that doesn't match any of your `.env.CompanionName` files, the integration will fall back to the default `.env` if it exists. If you don't have *any* `.env` files, you need to provide the environment variables described in `.env.example` some other way, which is outside the scope of this guide.
+
+### Starting the integration manually
+
+The helper scripts essentially just wrap a couple of Docker commands. If you'd prefer to have more flexibility over naming your files and companions, or if you need to make some Docker related changes (maybe you're running on an ARM processor), there are two Docker commands to run. Here's how I'd run them in this "Vicky and Marie" example. Reminder: my `.env` files are still named `.env.vicky` and `.env.marie` respectively.
+
+#### Build the Docker images
+
+`docker build -t vicky .`
+`docker build -t marie .`
+
+These two commands give me Docker images named `vicky` and `marie` that I can then go on and run.
+
+#### Run the Docker containers
+
+`docker run -d --name vicky -e COMPANION_NAME=vicky vicky`
+`docker run -d --name marie -e COMPANION_NAME=marie marie`
+
+Now I have both companions up and running.
+
+#### Differently named `.env` files
+
+The `-e COMPANION_NAME=name` portion of the above commands dictates which `.env` file would be used. If I had differently named `.env` files that didn't match the above described convention, I could do the following.
+
+Let's say I have two different configurations for Vicky that I want to run at different times. The difference between them is irrelevant, but let's just say one of them contains `RESPONSE_KEYWORDS` and the other doesn't. I want to chat with Vicky in Discord all the time, but sometimes I want these keyword triggers, and other times I don't. So, I might have `.env.vicky-with-keywords` and `.env-vicky-without-keywords`. The other content of the file is identical.
+
+Now, I can't use the default helper scripts, but I can run the following commands to effectively toggle between these different configurations.
+
+First, delete the running container if one exists.
+
+`docker container rm vicky -f`
+
+Next, build the image if there have been changes.
+
+`docker build -t vicky .`
+
+And finally, run the container with the configuration I want.
+
+`docker run -d --name vicky -e COMPANION_NAME=vicky-with-keywords vicky`
+
+or
+
+`docker run -d --name vicky -e COMPANION_NAME=vicky-without-keywords vicky`
+
+In both run commands, the only difference is the value given to `COMPANION_NAME`, which matches the `.env` file suffixes I described above.
+
+If you haven't made any changes to any of the files and simply want to toggle back and forth between different configurations, you can run the `docker container rm` and `docker run` commands, omitting the `docker build` command. But if you change anything in the `.env` files, you'll have to `docker build` again.
 
 # Updating
 
