@@ -3,6 +3,7 @@
 ## v0.5
 
 * Support for multiple `.env` files, see new README.md instructions
+* Replies in DMs are no longer a "reply" to the message that triggered it, rather just sent as a normal message to better emulate how users chat in DMs
 
 ## v0.4
 
