@@ -223,9 +223,17 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
         stopTyping <- true
 
         // Send as a reply to the message that triggered the response, helps keep things orderly
-        _, sendErr := s.ChannelMessageSendReply(m.ChannelID, companionReply, m.Reference())
-        if sendErr != nil {
-            fmt.Println("Error sending message: ", err)
+        // But only if this is in a server - if it's a DM, send it as a straight message
+        if m.GuildID == "" {
+            _, sendErr := s.ChannelMessageSend(m.ChannelID, companionReply)
+            if sendErr != nil {
+                fmt.Println("Error sending message: ", err)
+            }
+        } else {
+            _, sendErr := s.ChannelMessageSendReply(m.ChannelID, companionReply, m.Reference())
+            if sendErr != nil {
+                fmt.Println("Error sending message: ", err)
+            }
         }
 
         return nil
