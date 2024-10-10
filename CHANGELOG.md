@@ -3,6 +3,7 @@
 ## v0.5.1
 
 * Consume newer version of NomiKinGo that prevents the sending of oversized messages to companions.
+* Auto-update bot status
 
 ## v0.5
 
