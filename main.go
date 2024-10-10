@@ -302,6 +302,27 @@ func main() {
         log.Fatalf("Error opening Discord connection: %v", err)
     }
 
+    updateStatus(dg)
+    statusTicker := time.NewTicker(10 * time.Minute)
+    defer statusTicker.Stop()
+    go func() {
+        for {
+            select {
+            case <- statusTicker.C:
+                updateStatus(dg)
+            }
+        }
+    }()
+
+
+    // Kick off message processing
+    go queue.ProcessMessages()
+
+    fmt.Println("Bot is now running. Press CTRL+C to exit.")
+    select {}
+}
+
+func updateStatus(dg *discordgo.Session) {
     // Set bot online/custom status
     statusMessageLocation := "https://raw.githubusercontent.com/d3tourrr/NomiKin-Discord/refs/heads/main/StatusMessage.txt"
     statusResp, err := http.Get(statusMessageLocation)
@@ -328,10 +349,4 @@ func main() {
     } else {
         log.Printf("Status update successful: %v", discordStatus)
     }
-
-    // Kick off message processing
-    go queue.ProcessMessages()
-
-    fmt.Println("Bot is now running. Press CTRL+C to exit.")
-    select {}
 }
