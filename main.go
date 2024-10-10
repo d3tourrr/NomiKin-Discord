@@ -326,7 +326,7 @@ func main() {
     if err != nil {
         log.Printf("Error setting status: %v", err)
     } else {
-        log.Println("Status update successful")
+        log.Printf("Status update successful: %v", discordStatus)
     }
 
     // Kick off message processing
