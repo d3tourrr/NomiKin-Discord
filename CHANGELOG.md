@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.1
+
+* Consume newer version of NomiKinGo that prevents the sending of oversized messages to companions.
+
 ## v0.5
 
 * Support for multiple `.env` files, see new README.md instructions

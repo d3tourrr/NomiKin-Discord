@@ -17,7 +17,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.5"
+var version = "v0.5.1"
 
 func contains(slice []string, item string) bool {
     for _, s := range slice {
