@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.2
+
+* Bugfix: Companion now stops typing when an error occurs.
+
 ## v0.5.1
 
 * Consume newer version of NomiKinGo that prevents the sending of oversized messages to companions.

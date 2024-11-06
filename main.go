@@ -17,7 +17,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.5.1"
+var version = "v0.5.2"
 
 func contains(slice []string, item string) bool {
     for _, s := range slice {
@@ -217,6 +217,7 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
         }
         if err != nil {
             fmt.Printf("Error exchanging messages with companion: %v", err)
+            stopTyping <- true
             return nil
         }
 
