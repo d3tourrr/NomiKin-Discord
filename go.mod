@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/bwmarrin/discordgo v0.28.1
-	github.com/d3tourrr/NomiKinGo v0.0.0-20241010170702-4929c3810b47
+	github.com/d3tourrr/NomiKinGo v0.0.0-20241101183006-91299fe0fc87
 	github.com/joho/godotenv v1.5.1
 )
 

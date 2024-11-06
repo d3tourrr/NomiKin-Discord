@@ -2,6 +2,8 @@ github.com/bwmarrin/discordgo v0.28.1 h1:gXsuo2GBO7NbR6uqmrrBDplPUx2T3nzu775q/Rd
 github.com/bwmarrin/discordgo v0.28.1/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/d3tourrr/NomiKinGo v0.0.0-20241010170702-4929c3810b47 h1:/u25xOri9WgIrMzSY7g4ynenTxqTG2JXVqZ19/Jfb4M=
 github.com/d3tourrr/NomiKinGo v0.0.0-20241010170702-4929c3810b47/go.mod h1:PDepd5yJzKTg8tP/uRm/MFhOvMdevt7QgN2jd49RazM=
+github.com/d3tourrr/NomiKinGo v0.0.0-20241101183006-91299fe0fc87 h1:jfIB5SIDbhC94CtLC17jxKurwGlsLD4wxcSqqPn6uyo=
+github.com/d3tourrr/NomiKinGo v0.0.0-20241101183006-91299fe0fc87/go.mod h1:PDepd5yJzKTg8tP/uRm/MFhOvMdevt7QgN2jd49RazM=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
