@@ -2,9 +2,11 @@
 package main
 
 import (
+    "encoding/json"
     "fmt"
     "io/ioutil"
     "log"
+    "math/rand"
     "net/http"
     "os"
     "regexp"
@@ -17,7 +19,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.5.2"
+var version = "v0.6.1"
 
 func contains(slice []string, item string) bool {
     for _, s := range slice {
@@ -28,7 +30,20 @@ func contains(slice []string, item string) bool {
     return false
 }
 
+type Room struct {
+    Name    string
+    Note    string
+    Uuid    string
+    Backchanneling bool
+    Nomis   []NomiKin.Nomi
+    RandomResponseChance int
+}
+
+var Rooms map[string]Room
+
 // Message queueing
+var queue MessageQueue
+
 type QueuedMessage struct {
     Message   *discordgo.MessageCreate
     Session   *discordgo.Session
@@ -66,7 +81,7 @@ func (q *MessageQueue) ProcessMessages() {
             continue
         }
 
-        err := sendMessageToAPI(queuedMessage.Session, queuedMessage.Message)
+        err := sendMessageToCompanion(queuedMessage.Session, queuedMessage.Message)
         if err != nil {
             log.Printf("Failed to send message to Companion API: %v", err)
             q.Enqueue(queuedMessage) // Requeue the message if failed
@@ -77,7 +92,7 @@ func (q *MessageQueue) ProcessMessages() {
 }
 
 // Message formatting and handling
-func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
+func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) error {
     respondToThis := false
 
     // Is the companion mentioned or is this a reply to their message?
@@ -142,6 +157,16 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
         }
     }
 
+    // Is this a Nomi Room? Random chance to respond
+    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" && !respondToThis {
+        rand.Seed(time.Now().UnixNano())
+        randomValue := rand.Float64() * 100
+        if randomValue < float64(Rooms[m.ChannelID].RandomResponseChance) {
+            respondToThis = true
+            fmt.Printf("Nomi %v random response chance triggered. RandomResponseChance in channel %v set to %v%.\n", os.Getenv("COMPANION_ID"), m.ChannelID, float64(Rooms[m.ChannelID].RandomResponseChance))
+        }
+    }
+
     if respondToThis {
         companionToken := os.Getenv("COMPANION_TOKEN")
         if companionToken == "" {
@@ -163,7 +188,7 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
 
         companionType = strings.ToUpper(companionType)
         if companionType != "NOMI" && companionType != "KINDROID" {
-            fmt.Printf("Improper companion type. Set COMPANION_TYPE environment variable to either 'NOMI' or 'KINDROID'. Your value: %v", companionType)
+            fmt.Printf("Improper companion type. Set COMPANION_TYPE environment variable to either 'NOMI' or 'KINDROID'. Your value: %v\n", companionType)
             return nil
         }
 
@@ -211,7 +236,14 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
 
         switch companionType {
         case "NOMI":
-            companionReply, err = nomikin.SendNomiMessage(&updatedMessage)
+            if os.Getenv("CHAT_STYLE") == "ROOMS" {
+                roomId := Rooms[m.ChannelID].Uuid
+                _, err = nomikin.SendNomiRoomMessage(&updatedMessage, &roomId)
+                time.Sleep(3 * time.Second) // Avoid Nomi not ready for message error
+                companionReply, err = nomikin.RequestNomiRoomReply(&roomId, &nomikin.CompanionId)
+            } else {
+                companionReply, err = nomikin.SendNomiMessage(&updatedMessage)
+            }
         case "KINDROID":
             companionReply, err = nomikin.SendKindroidMessage(&updatedMessage)
         }
@@ -240,6 +272,34 @@ func sendMessageToAPI(s *discordgo.Session, m *discordgo.MessageCreate) error {
         return nil
     }
 
+    // Even if a Nomi won't respond, if they are in ROOMS mode, we need to send the message to the correct room
+    // TODO: Clean this up, duplicated code to sanitize and send a message... In fact, there's probably plenty of
+    // duplicated and messy code to clean up...
+    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" {
+        nomikin := NomiKin.NomiKin {
+            ApiKey: os.Getenv("COMPANION_TOKEN"),
+            CompanionId: os.Getenv("COMPANION_ID"),
+        }
+        updatedMessage := m.Content
+        var err error
+        if m.GuildID != "" {
+            updatedMessage, err = m.ContentWithMoreMentionsReplaced(s)
+            if err != nil {
+                log.Printf("Error replacing Discord mentions with usernames: %v", err)
+            }
+        }
+
+        userPrefix := os.Getenv("MESSAGE_PREFIX")
+        if userPrefix != "" {
+            re := regexp.MustCompile(`\{\{USERNAME\}\}`)
+            userPrefix = re.ReplaceAllString(userPrefix, m.Author.Username)
+            updatedMessage = userPrefix + " " + updatedMessage
+        }
+
+        roomId := Rooms[m.ChannelID].Uuid
+        _, err = nomikin.SendNomiRoomMessage(&updatedMessage, &roomId)
+    }
+
     return nil
 }
 
@@ -255,8 +315,6 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
     queue.Enqueue(message)
 }
-
-var queue MessageQueue
 
 func main() {
     // Support for multiple .env files named .env.companionName
@@ -293,7 +351,7 @@ func main() {
         log.Fatalf("Error creating Discord session: %v", err)
     }
 
-    // For keyword triggering
+    // For keyword triggering and Nomi room support
     dg.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
 
     dg.AddHandler(messageCreate)
@@ -301,6 +359,55 @@ func main() {
     err = dg.Open()
     if err != nil {
         log.Fatalf("Error opening Discord connection: %v", err)
+    }
+
+    // For Nomi rooms
+    if os.Getenv("COMPANION_TYPE") == "NOMI" {
+        companionToken := os.Getenv("COMPANION_TOKEN")
+        if companionToken == "" {
+            log.Fatal("No companion token provided. Set COMPANION_TOKEN environment variable.")
+        }
+
+        companionId := os.Getenv("COMPANION_ID")
+        if companionId == "" {
+            log.Fatal("No companion AI ID provided. Set COMPANION_ID environment variable.")
+        }
+
+        nomi := NomiKin.NomiKin {
+            ApiKey: companionToken,
+            CompanionId: companionId,
+        }
+
+        nomi.Init()
+
+        if os.Getenv("CHAT_STYLE") == "ROOMS" {
+            roomsString := os.Getenv("NOMI_ROOMS")
+            if roomsString == "" {
+                log.Fatal("Nomi is in ROOMS mode but no rooms were provided.")
+            }
+
+            var rooms []Room
+            if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
+                log.Fatalf("Error parsing NOMI_ROOMS: %v", err)
+            }
+
+            Rooms = make(map[string]Room)
+
+            for _, room := range rooms {
+                log.Printf("Creating/adding Nomi %v to room\n Name: %v\n Note: %v\n Backchanneling: %v\n", nomi.CompanionId, room.Name, room.Note, room.Backchanneling)
+                if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
+                    log.Fatalf("RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
+                    return
+                }
+
+                r, err := nomi.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{nomi.CompanionId})
+                if err != nil {
+                    log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", nomi.CompanionId, room.Name, err)
+                }
+
+                Rooms[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
+            }
+        }
     }
 
     updateStatus(dg)

@@ -13,7 +13,7 @@ You need an instance of this Discord bot per AI companion you wish you invite to
    1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and sign in with your Discord account.
    1. Create a new application and then a bot under that application. It's a good idea to use the name of your companion and an appropriate avatar.
    1. Copy the bot's token from the `Bot` page, under the `Token` section. You may need to reset the token to see it. This token is a **SECRET**, do not share it with anyone.
-      * ⚠️ While you're on the `Bot` page, you must enable `Message Content Intent` or your companion will not be able to connect to Discord. (This is a new change to support responding to messages with certain keywords.)
+      * ⚠️ While you're on the `Bot` page, you must enable `Message Content Intent` or your companion will not be able to connect to Discord. (This is a new change to support responding to messages with certain keywords and for Nomi rooms.)
    1. Add the bot to a server with the required permissions (at least "Read Messages" and "Send Messages")
       1. Go to the `Oauth2` page
       1. Under `Scopes` select `Bot`
@@ -38,12 +38,74 @@ You need an instance of this Discord bot per AI companion you wish you invite to
    1. Set your optional message prefix - leading text that is sent to every message your companion receives to help them differentiate between Discord messages and messages sent within the Nomi or Kindroid app
    1. Set `RESPOND_TO_ROLE_PING` and `RESPOND_TO_DIRECT_MESSAGE` to `FALSE` if you don't want your companion to respond to DMs or when a role they have is pinged
    1. Set a comma separated list of keywords that will trigger your companion to respond, even if the message doesn't ping them, like their name (ex: `breakfast, bears` - your companion will reply to any message that contains the words "breakfast" or "bears")
+   1. If using Nomi Rooms, see the below section on configuring that part of your `.env` file.
 1. Build and run the Docker container
    * Run either `start-windows-companion.ps1` on Windows (or in PowerShell) or `start-linux-companion.sh` on Linux (or in Bash, including Git Bash)
    * Or run the following commands (Note: the above scripts start the container in a detached state, meaning you don't see the log output. The below commands start the container in an attached state, which means you see the log output, but the container, and therefore the Companion/Discord integration dies when you close your console.)
      1. Build the Docker image: `docker build -t nomikin-discord .`
      1. Run the Docker container: `docker run nomikin-discord`
 1. Interact with your companion in Discord!
+
+# Nomi Rooms
+
+Nomi.ai has a feature called "Rooms" which function like a group chat. Your Nomi will be aware of all the messages sent in a specified Discord channel, but still only respond when they normally would (when they are pinged, or when one of their keywords is used) or by a configurable random chance. Kindroid does not have this feature at this time.
+
+To setup Rooms functionality, take a look at the updated `.env.example` file. There are two new settings to be aware of.
+
+1. `CHAT_STYLE` - To use the Rooms functionality, change this to `ROOMS`. Any other setting, including the default of `NORMAL` will cause your Nomi to behave as it otherwise would - only seeing messages where it is pinged, and responding to them all.
+1. `NOMI_ROOMS` - This is a single line JSON string that describes the different rooms your Nomi will participate in. It follows a *very* specific format, described below.
+
+## `NOMI_ROOMS`
+
+Here is an example of what the `NOMI_ROOMS` variable looks like when correctly specified for a Nomi.
+
+`NOMI_ROOMS='[{"Name": "1281953849208471603", "Note": "General chat", "Backchanneling": true, "RandomResponseChance": 10}, {"Name": "1282009168307421214", "Note": "For respectful conversations about pie", "Backchanneling": true, "RandomResponseChance": 0}]'`
+
+With proper JSON formatting (it needs to all be on one line and wrapped in quotes in your `.env` file, this is just for discussion purposes), it becomes a bit easier to read.
+
+```json
+[
+   {
+      "Name": "1281953849208471603",
+      "Note": "General chat",
+      "Backchanneling": true,
+      "RandomResponseChance": 10
+   },
+   {
+      "Name": "1282009168307421214",
+      "Note": "For respectful conversations about pie",
+      "Backchanneling": true,
+      "RandomResponseChance": 0
+   }
+]
+```
+
+It becomes a little easier to see now that this example specifies two Rooms, and each has four properties: Name, Note, Backchanneling and RandomResponseChance.
+* **Name**: This is the Channel ID given by Discord. This part matters greatly.
+  * The Name you specify must be the Channel ID for a Discord Channel that your Nomi will see.
+  * To get a Channel ID, you must enable Discord Developer Mode: [Instructions](https://discord.com/developers/docs/activities/building-an-activity#step-0-enable-developer-mode)
+  * After turning on Developer Mode, you can right click on a Discord channel and select "Copy Channel ID"
+* **Note**: This is like the description shared note for a group chat. It gives the Nomi a little bit of a background for what will be discussed in this channel/room.
+* **Backchanneling**: Can either be `true` or `false` only. If `true`, your Nomi will have awareness in other chats about the things that are discussed in this room and in your one on one in-app conversation. If `false`, your Nomi's memory of what happens in this channel/room will be contained to that room, and memories from other chats will not be present in that channel/room. Backchanneling applies to a channel/room and cannot be configured per Nomi. Adding multiple Nomis to a room with conflicting values for `Backchanneling` will result in inconsistency or errors.
+* **RandomResponseChance**: This is a percentage chance (out of 100) that your Nomi will respond in a given channel even if they would not respond normally. The higher this number, the more likely it will be that your Nomi will respond to a message even if they wouldn't normally respond. This must be a whole number between 0 and 100. If set to 0, your Nomi will never randomly respond to messages and will only respond when pinged or one of their keywords is used. If it is set to 100, they will respond to every single message posted in a channel. **BE CAREFUL WITH THIS SETTING!** (More details below.)
+
+When starting up this integration, if the room already exists, your Nomi will be added to it if it's not already included.
+
+## Warning and Notes
+
+**In normal mode, messages sent to and from your Nomi are visible in the Nomi app. When using Rooms, this integration will log the messages, but they won't be visible in the Nomi app. There is no indication in the Nomi app that your Nomi is chatting in rooms. There is also no convenient way to manage which rooms your Nomi is in.**
+
+Be careful using rooms in particularly busy servers. The Nomi API takes time to process messages. This integration queues and throttles the messages that are sent to your Nomi, but it might get behind and lag if the channel your Nomi is watching is very active.
+
+Make sure in your `.env` file that the formatting for `NOMI_ROOMS` *exactly* follows the example, including being all on one line and how it is wrapped in quotes and other symbols.
+
+### Additional Warning About `RandomResponseChance`
+
+⚠️⚠️ The `RandomResponseChance` field in your `NOMI_ROOMS` list determines how often your Nomi will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If your Nomi responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. They will continue conversing forever until they are interrupted, either by one of them being made unable to respond (timed out, kicked from the server, etc.) or their Docker container is stopped, breaking the reply chain. ⚠️
+
+`RandomResponseChance` applies to each message individually. What this means is that if you set `RandomResponseChance` to `50`, every message posted in a given channel there will be a 50% chance that the Nomi responds. It's entirely possible that a Nomi would respond to 5 messages in a row and then not respond to the next 10. It's not meant to be consistent, it's meant to make your Nomi's presence feel more organic in your Discord server.
+
+Your Nomi does not decide when to respond. The chance of a response despite not being pinged is entirely left up to random chance, based on your provided value for `RandomResponseChance`.
 
 # Running multiple companions at once
 
