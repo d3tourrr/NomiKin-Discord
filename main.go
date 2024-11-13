@@ -158,12 +158,12 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     }
 
     // Is this a Nomi Room? Random chance to respond
-    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" && !respondToThis {
+    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" && !respondToThis && m.GuildID != "" {
         rand.Seed(time.Now().UnixNano())
         randomValue := rand.Float64() * 100
         if randomValue < float64(Rooms[m.ChannelID].RandomResponseChance) {
             respondToThis = true
-            fmt.Printf("Nomi %v random response chance triggered. RandomResponseChance in channel %v set to %v%.\n", os.Getenv("COMPANION_ID"), m.ChannelID, float64(Rooms[m.ChannelID].RandomResponseChance))
+            fmt.Printf("Nomi %v random response chance triggered. RandomResponseChance in channel %v set to %v.\n", os.Getenv("COMPANION_ID"), m.ChannelID, float64(Rooms[m.ChannelID].RandomResponseChance))
         }
     }
 
