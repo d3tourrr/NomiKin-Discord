@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.6.1
+
+* New feature! Nomi has released new API functionality that works like a group chat: [Rooms!](https://api.nomi.ai/docs/). This version of the NomiKin-Discord integration allows you to specify channels on Discord as Nomi Rooms.
+  * Your Nomi still sends a message when they are pinged (or one of their keywords is used), the experience to get a Nomi to say something remains unchanged.
+    * Except you may provide a value to the `RandomResponseChance` property in your `.env` file per channel/room that determines how likely it is that your Nomi will respond to a message in a given room despite a response not being explicitly triggered.
+  * The difference now is that your Nomi will be aware of all the messages sent in the specified channel when they do eventually respond. They'll see all messages in the channels you specify whether pinged or not, but only reply when pinged or randomly per `RandomResponseChance`.
+  * See the [readme](./README.md) file in this repo for information on setting this up.
+  * You don't have to use Rooms. You can leave your existing Nomi configurations as they are, or use a `CHAT_STYLE` other than `ROOMS` to have the default experience where Nomis only see the messages they're pinged in.
+* **Kindroid functionality is unchanged.**
+
 ## v0.5.2
 
 * Bugfix: Companion now stops typing when an error occurs.
