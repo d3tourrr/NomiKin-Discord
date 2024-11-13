@@ -99,6 +99,8 @@ Be careful using rooms in particularly busy servers. The Nomi API takes time to 
 
 Make sure in your `.env` file that the formatting for `NOMI_ROOMS` *exactly* follows the example, including being all on one line and how it is wrapped in quotes and other symbols.
 
+Nomis cannot see images attached to messages, nor do they click links. In Discord, gifs are sent as a link to the gif and then the Discord client intelligently displays the gif instead of just the link. Nomis just see the link, not the gif, although they can usually make a good guess at what the gif is about by the URL they see.
+
 ### Additional Warning About `RandomResponseChance`
 
 ⚠️⚠️ The `RandomResponseChance` field in your `NOMI_ROOMS` list determines how often your Nomi will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If your Nomi responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. They will continue conversing forever until they are interrupted, either by one of them being made unable to respond (timed out, kicked from the server, etc.) or their Docker container is stopped, breaking the reply chain. ⚠️
