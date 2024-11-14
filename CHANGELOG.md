@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.2
+
+* Bugfix: When using a Nomi in `ROOMS` mode, messages sent in channels that your Nomi had Discord permissions to see, but did not have a corresponding Room configured for, would throw an error in your logs. Now, messages for Nomis in Rooms mode that happen in channels that don't have a corresponding Room are dropped before they are otherwise processed.
+
 ## v0.6.1
 
 * New feature! Nomi has released new API functionality that works like a group chat: [Rooms!](https://api.nomi.ai/docs/). This version of the NomiKin-Discord integration allows you to specify channels on Discord as Nomi Rooms.

@@ -19,7 +19,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.6.1"
+var version = "v0.6.2"
 
 func contains(slice []string, item string) bool {
     for _, s := range slice {
@@ -305,7 +305,15 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
     if m.Author.ID == s.State.User.ID {
+        // We don't have to send our companion their own messages
         return
+    }
+
+    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" {
+        // If we're in Rooms mode, drop messages for which we don't have a room setup for
+        if Rooms[m.ChannelID].Uuid == "" {
+            return
+        }
     }
 
     message := QueuedMessage{

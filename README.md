@@ -50,6 +50,8 @@ You need an instance of this Discord bot per AI companion you wish you invite to
 
 Nomi.ai has a feature called "Rooms" which function like a group chat. Your Nomi will be aware of all the messages sent in a specified Discord channel, but still only respond when they normally would (when they are pinged, or when one of their keywords is used) or by a configurable random chance. Kindroid does not have this feature at this time.
 
+> NOTE: When in Rooms mode, your Nomi will ignore all messages that occur in a Discord channel that they do not have a corresponding Room for. That means that even if your Nomi has permissions on Discord to see a certain channel, and you ping them in that channel, if you haven't setup that Channel as a Room (details on how to do that below), your Nomi will ignore that ping. This means your Nomi will also ignore DMs when in Rooms mode, regardless of the setting you choose for `RESPOND_TO_DIRECT_MESSAGE` in your `.env` file.
+
 To setup Rooms functionality, take a look at the updated `.env.example` file. There are two new settings to be aware of.
 
 1. `CHAT_STYLE` - To use the Rooms functionality, change this to `ROOMS`. Any other setting, including the default of `NORMAL` will cause your Nomi to behave as it otherwise would - only seeing messages where it is pinged, and responding to them all.
@@ -95,6 +97,8 @@ When starting up this integration, if the room already exists, your Nomi will be
 ## Warning and Notes
 
 **In normal mode, messages sent to and from your Nomi are visible in the Nomi app. When using Rooms, this integration will log the messages, but they won't be visible in the Nomi app. There is no indication in the Nomi app that your Nomi is chatting in rooms. There is also no convenient way to manage which rooms your Nomi is in.**
+
+Your Nomi will not see any messages sent to Discord channels that don't have a corresponding room configured. This includes pings, even if your Nomi has Discord permissions to see and send messages to a channel. This also includes DMs.
 
 Be careful using rooms in particularly busy servers. The Nomi API takes time to process messages. This integration queues and throttles the messages that are sent to your Nomi, but it might get behind and lag if the channel your Nomi is watching is very active.
 
