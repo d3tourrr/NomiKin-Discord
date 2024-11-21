@@ -19,7 +19,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.6.2"
+var version = "v0.6.3"
 
 type Companion struct {
     DiscordBotToken string
