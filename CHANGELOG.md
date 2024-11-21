@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.3
+
+* New feature: `REPLY_PREFIX`
+  * In your `.env` file, use the `REPLY_PREFIX` variable to give messages that are sent as replies to other messages a different prefix than normal.
+
 ## v0.6.2
 
 * Bugfix: When using a Nomi in `ROOMS` mode, messages sent in channels that your Nomi had Discord permissions to see, but did not have a corresponding Room configured for, would throw an error in your logs. Now, messages for Nomis in Rooms mode that happen in channels that don't have a corresponding Room are dropped before they are otherwise processed.

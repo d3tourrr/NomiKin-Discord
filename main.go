@@ -21,6 +21,146 @@ import (
 
 var version = "v0.6.2"
 
+type Companion struct {
+    DiscordBotToken string
+    CompanionToken  string
+    CompanionId     string
+    CompanionType   string
+    MessagePrefix   string
+    ReplyPrefix     string
+    RespondRole     bool
+    RespondDM       bool
+    Keywords        string
+    ChatStyle       string
+    Rooms           string
+    NomiKin         NomiKin.NomiKin
+}
+
+var companion Companion
+
+func (c *Companion) Setup() {
+    if os.Getenv("DISCORD_BOT_TOKEN") != "" {
+        c.DiscordBotToken = os.Getenv("DISCORD_BOT_TOKEN")
+    } else {
+        log.Fatal("Discord Bot Token not found. Set DISCORD_BOT_TOKEN in .env file.")
+        return
+    }
+
+    if os.Getenv("COMPANION_TOKEN") != "" {
+        c.CompanionToken = os.Getenv("COMPANION_TOKEN")
+    } else {
+        log.Fatal("Companion Token not found. Set COMPANION_TOKEN in .env file.")
+        return
+    }
+
+    if os.Getenv("COMPANION_ID") != "" {
+        c.CompanionId = os.Getenv("COMPANION_ID")
+    } else {
+        log.Fatal("Companion ID not found. Set COMPANION_ID in .env file.")
+        return
+    }
+
+    if os.Getenv("COMPANION_TYPE") != "" {
+        if os.Getenv("COMPANION_TYPE") != "NOMI" && os.Getenv("COMPANION_TYPE") != "KINDROID" {
+            log.Fatal("Companion Type must be set to either `NOMI` or `KINDROID`. Set COMPANION_TYPE correctly in .env file.")
+            return
+        } else {
+            c.CompanionType = os.Getenv("COMPANION_TYPE")
+        }
+    } else {
+        log.Fatal("Companion Type not found. Set COMPANION_TYPE in .env file.")
+        return
+    }
+
+    c.MessagePrefix = os.Getenv("MESSAGE_PREFIX")
+    c.ReplyPrefix = os.Getenv("REPLY_PREFIX")
+
+    switch os.Getenv("RESPOND_TO_ROLE_PING") {
+        case "TRUE":
+        c.RespondRole = true
+        break
+        case "FALSE":
+        c.RespondRole = false
+        break
+        default:
+        log.Fatal("Respond To Role Ping must be either `TRUE` or `FALSE`. Fix RESPOND_TO_ROLE_PING in .env file.")
+        return
+    }
+
+    switch os.Getenv("RESPOND_TO_DIRECT_MESSAGE") {
+        case "TRUE":
+        c.RespondDM = true
+        break
+        case "FALSE":
+        c.RespondDM = false
+        break
+        default:
+        log.Fatal("Respond To DM must be either `TRUE` or `FALSE`. Fix RESPOND_TO_DIRECT_MESSAGE in .env file.")
+        return
+    }
+
+    c.Keywords = os.Getenv("RESPONSE_KEYWORDS")
+
+    if os.Getenv("CHAT_STYLE") == "ROOMS" {
+        c.ChatStyle = "ROOMS"
+    } else {
+        c.ChatStyle = "NORMAL"
+    }
+
+    c.Rooms = os.Getenv("NOMI_ROOMS")
+
+    c.NomiKin = NomiKin.NomiKin{
+        ApiKey: c.CompanionToken,
+        CompanionId: c.CompanionId,
+    }
+}
+
+func updateMessage(s *discordgo.Session, m *discordgo.MessageCreate) string {
+    updatedMessage := ""
+
+    var err error
+    if m.GuildID != "" {
+        // Only if it's not a DM, otherwise this doesn't work - apparently this needs guild state info
+        updatedMessage, err = m.ContentWithMoreMentionsReplaced(s)
+        if err != nil {
+            log.Printf("Error replacing Discord mentions with usernames: %v", err)
+        }
+    }
+    // Do we need the normal or reply prefix?
+    reply := false
+    userPrefix := ""
+    if m.MessageReference != nil && m.MessageReference.MessageID != "" {
+        reply = true
+    }
+
+    if reply {
+        if companion.ReplyPrefix == "" {
+            userPrefix = companion.MessagePrefix
+        } else {
+            userPrefix = companion.ReplyPrefix
+        }
+
+        repliedMessage, err := s.ChannelMessage(m.ChannelID, m.MessageReference.MessageID)
+        if err != nil {
+            log.Printf("Error fetching replied message: %v\n", err)
+        }
+
+        reU := regexp.MustCompile(`\{\{USERNAME\}\}`)
+        reR := regexp.MustCompile(`\{\{REPLY_TO\}\}`)
+        userPrefix = reU.ReplaceAllString(userPrefix, m.Author.Username)
+        userPrefix = reR.ReplaceAllString(userPrefix, repliedMessage.Author.Username)
+    } else {
+        userPrefix = companion.MessagePrefix
+        re := regexp.MustCompile(`\{\{USERNAME\}\}`)
+        userPrefix = re.ReplaceAllString(userPrefix, m.Author.Username)
+    }
+
+    updatedMessage = userPrefix + " " + updatedMessage
+    updatedMessage = strings.TrimSpace(updatedMessage)
+
+    return updatedMessage
+}
+
 func contains(slice []string, item string) bool {
     for _, s := range slice {
         if s == item {
@@ -105,7 +245,7 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
 
     // Is the companion mentioned by role
     // Doesn't work in DMs, no need to check if the bot is also mentioned specifically
-    if strings.ToUpper(os.Getenv("RESPOND_TO_ROLE_PING")) == "TRUE" && !respondToThis && m.GuildID != "" {
+    if companion.RespondRole && !respondToThis && m.GuildID != "" {
         // Check this every time in case the bot is added to or removed from roles, not in DMs
         botID := s.State.User.ID
 
@@ -124,8 +264,8 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     }
 
     // Does this message contain one of the reponse keywords?
-    if os.Getenv("RESPONSE_KEYWORDS") != "" && !respondToThis {
-        responseKeywords := os.Getenv("RESPONSE_KEYWORDS")
+    if companion.Keywords != "" && !respondToThis {
+        responseKeywords := companion.Keywords
         words := strings.Split(responseKeywords, ",")
         charCleaner := regexp.MustCompile(`[^a-zA-Z0-9\s]+`)
         messageWords := strings.Fields(strings.ToLower(charCleaner.ReplaceAllString(m.Message.Content, "")))
@@ -145,20 +285,18 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     }
 
     // Is this a DM?
-    respondToDM := strings.ToUpper(os.Getenv("RESPOND_TO_DIRECT_MESSAGE"))
     if m.GuildID == "" {
         // If this is a DM, respond if RESPOND_TO_DIRECT_MESSAGE is true, ignore if it's false,
-        // and leave `respondToThis` at it's normal value otherwise - still respond if pinged/keyword
-        switch respondToDM {
-            case "TRUE":
+        switch companion.RespondDM {
+            case true:
             respondToThis = true
-            case "FALSE":
+            case false:
             respondToThis = false
         }
     }
 
     // Is this a Nomi Room? Random chance to respond
-    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" && !respondToThis && m.GuildID != "" {
+    if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" && !respondToThis && m.GuildID != "" {
         rand.Seed(time.Now().UnixNano())
         randomValue := rand.Float64() * 100
         if randomValue < float64(Rooms[m.ChannelID].RandomResponseChance) {
@@ -168,55 +306,9 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     }
 
     if respondToThis {
-        companionToken := os.Getenv("COMPANION_TOKEN")
-        if companionToken == "" {
-            fmt.Println("No companion token provided. Set COMPANION_TOKEN environment variable.")
-            return nil
-        }
+        updatedMessage := updateMessage(s, m)
 
-        companionId := os.Getenv("COMPANION_ID")
-        if companionId == "" {
-            fmt.Println("No companion AI ID provided. Set COMPANION_ID environment variable.")
-            return nil
-        }
-
-        companionType := os.Getenv("COMPANION_TYPE")
-        if companionType == "" {
-            fmt.Println("No companion AI type provided. Set COMPANION_TYPE environment variable.")
-            return nil
-        }
-
-        companionType = strings.ToUpper(companionType)
-        if companionType != "NOMI" && companionType != "KINDROID" {
-            fmt.Printf("Improper companion type. Set COMPANION_TYPE environment variable to either 'NOMI' or 'KINDROID'. Your value: %v\n", companionType)
-            return nil
-        }
-
-        // Replacing mentions makes it so the companion sees the usernames instead of <@userID> syntax
-        updatedMessage := m.Content
         var err error
-        if m.GuildID != "" {
-            // But only if it's not a DM, otherwise this doesn't work - apparently this needs guild state info
-            updatedMessage, err = m.ContentWithMoreMentionsReplaced(s)
-            if err != nil {
-                log.Printf("Error replacing Discord mentions with usernames: %v", err)
-            }
-        }
-
-        // Add the message prefix if one exists, substitute sender username
-        userPrefix := os.Getenv("MESSAGE_PREFIX")
-        if userPrefix != "" {
-            re := regexp.MustCompile(`\{\{USERNAME\}\}`)
-            userPrefix = re.ReplaceAllString(userPrefix, m.Author.Username)
-            updatedMessage = userPrefix + " " + updatedMessage
-        }
-
-        // Construct the NomiKin obj and send the message
-        nomikin := NomiKin.NomiKin {
-            ApiKey: companionToken,
-            CompanionId: companionId,
-        }
-
         companionReply := ""
         err = nil
 
@@ -234,18 +326,18 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
             }
         }()
 
-        switch companionType {
+        switch companion.CompanionType {
         case "NOMI":
-            if os.Getenv("CHAT_STYLE") == "ROOMS" {
+            if companion.ChatStyle == "ROOMS" {
                 roomId := Rooms[m.ChannelID].Uuid
-                _, err = nomikin.SendNomiRoomMessage(&updatedMessage, &roomId)
+                _, err = companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
                 time.Sleep(3 * time.Second) // Avoid Nomi not ready for message error
-                companionReply, err = nomikin.RequestNomiRoomReply(&roomId, &nomikin.CompanionId)
+                companionReply, err = companion.NomiKin.RequestNomiRoomReply(&roomId, &companion.NomiKin.CompanionId)
             } else {
-                companionReply, err = nomikin.SendNomiMessage(&updatedMessage)
+                companionReply, err = companion.NomiKin.SendNomiMessage(&updatedMessage)
             }
         case "KINDROID":
-            companionReply, err = nomikin.SendKindroidMessage(&updatedMessage)
+            companionReply, err = companion.NomiKin.SendKindroidMessage(&updatedMessage)
         }
         if err != nil {
             fmt.Printf("Error exchanging messages with companion: %v", err)
@@ -275,29 +367,13 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     // Even if a Nomi won't respond, if they are in ROOMS mode, we need to send the message to the correct room
     // TODO: Clean this up, duplicated code to sanitize and send a message... In fact, there's probably plenty of
     // duplicated and messy code to clean up...
-    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" {
-        nomikin := NomiKin.NomiKin {
-            ApiKey: os.Getenv("COMPANION_TOKEN"),
-            CompanionId: os.Getenv("COMPANION_ID"),
-        }
-        updatedMessage := m.Content
-        var err error
-        if m.GuildID != "" {
-            updatedMessage, err = m.ContentWithMoreMentionsReplaced(s)
-            if err != nil {
-                log.Printf("Error replacing Discord mentions with usernames: %v", err)
-            }
-        }
-
-        userPrefix := os.Getenv("MESSAGE_PREFIX")
-        if userPrefix != "" {
-            re := regexp.MustCompile(`\{\{USERNAME\}\}`)
-            userPrefix = re.ReplaceAllString(userPrefix, m.Author.Username)
-            updatedMessage = userPrefix + " " + updatedMessage
-        }
-
+    if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
+        updatedMessage := updateMessage(s, m)
         roomId := Rooms[m.ChannelID].Uuid
-        _, err = nomikin.SendNomiRoomMessage(&updatedMessage, &roomId)
+        _, err := companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
+        if err != nil {
+            log.Printf("Error sending message to room: %v\n", err)
+        }
     }
 
     return nil
@@ -309,7 +385,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         return
     }
 
-    if os.Getenv("COMPANION_TYPE") == "NOMI" && os.Getenv("CHAT_STYLE") == "ROOMS" {
+    if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
         // If we're in Rooms mode, drop messages for which we don't have a room setup for
         if Rooms[m.ChannelID].Uuid == "" {
             return
@@ -348,13 +424,9 @@ func main() {
         }
     }
 
-    botToken := os.Getenv("DISCORD_BOT_TOKEN")
-    if botToken == "" {
-        fmt.Println("No bot token provided. Set DISCORD_BOT_TOKEN environment variable.")
-        return
-    }
+    companion.Setup()
 
-    dg, err := discordgo.New("Bot " + botToken)
+    dg, err := discordgo.New("Bot " + companion.DiscordBotToken)
     if err != nil {
         log.Fatalf("Error creating Discord session: %v", err)
     }
@@ -371,25 +443,10 @@ func main() {
 
     // For Nomi rooms
     if os.Getenv("COMPANION_TYPE") == "NOMI" {
-        companionToken := os.Getenv("COMPANION_TOKEN")
-        if companionToken == "" {
-            log.Fatal("No companion token provided. Set COMPANION_TOKEN environment variable.")
-        }
+        companion.NomiKin.Init()
 
-        companionId := os.Getenv("COMPANION_ID")
-        if companionId == "" {
-            log.Fatal("No companion AI ID provided. Set COMPANION_ID environment variable.")
-        }
-
-        nomi := NomiKin.NomiKin {
-            ApiKey: companionToken,
-            CompanionId: companionId,
-        }
-
-        nomi.Init()
-
-        if os.Getenv("CHAT_STYLE") == "ROOMS" {
-            roomsString := os.Getenv("NOMI_ROOMS")
+        if companion.ChatStyle == "ROOMS" {
+            roomsString := companion.Rooms
             if roomsString == "" {
                 log.Fatal("Nomi is in ROOMS mode but no rooms were provided.")
             }
@@ -402,15 +459,15 @@ func main() {
             Rooms = make(map[string]Room)
 
             for _, room := range rooms {
-                log.Printf("Creating/adding Nomi %v to room\n Name: %v\n Note: %v\n Backchanneling: %v\n", nomi.CompanionId, room.Name, room.Note, room.Backchanneling)
+                log.Printf("Creating/adding Nomi %v to room\n Name: %v\n Note: %v\n Backchanneling: %v\n", companion.CompanionId, room.Name, room.Note, room.Backchanneling)
                 if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
                     log.Fatalf("RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
                     return
                 }
 
-                r, err := nomi.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{nomi.CompanionId})
+                r, err := companion.NomiKin.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{companion.CompanionId})
                 if err != nil {
-                    log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", nomi.CompanionId, room.Name, err)
+                    log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", companion.CompanionId, room.Name, err)
                 }
 
                 Rooms[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
