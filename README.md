@@ -13,13 +13,15 @@ You need an instance of this Discord bot per AI companion you wish you invite to
    1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and sign in with your Discord account.
    1. Create a new application and then a bot under that application. It's a good idea to use the name of your companion and an appropriate avatar.
    1. Copy the bot's token from the `Bot` page, under the `Token` section. You may need to reset the token to see it. This token is a **SECRET**, do not share it with anyone.
-      * ⚠️ While you're on the `Bot` page, you must enable `Message Content Intent` or your companion will not be able to connect to Discord. (This is a new change to support responding to messages with certain keywords and for Nomi rooms.)
+   1. On the `Bot` page, enable `Message Content Intent`.
    1. Add the bot to a server with the required permissions (at least "Read Messages" and "Send Messages")
       1. Go to the `Oauth2` page
       1. Under `Scopes` select `Bot`
       1. Under `Bot Permissions` select `Send Messages` and `Read Message History`
       1. Copy the generated URL at the bottom and open it in a web browser to add the bot to your Discord server
-1. Install Git if you haven't already got it: [Instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+> [!WARNING]
+> While you're on the `Bot` page, you must enable `Message Content Intent` or your companion will not be able to connect to Discord. This is easy to miss.
+2. Install Git if you haven't already got it: [Instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 1. Install Docker if you haven't already got it: [Instructions](https://docs.docker.com/engine/install/)
 1. Clone this repo: `git clone https://github.com/d3tourrr/NomiKin-Discord.git`
    1. After cloning the repo, change to the directory: `cd NomiKin-Discord`
@@ -97,20 +99,24 @@ When starting up this integration, if the room already exists, your Nomi will be
 
 ## Warning and Notes
 
-> [!IMPORTANT]
+> [!WARNING]
+> Make sure in your `.env` file that the formatting for `NOMI_ROOMS` *exactly* follows the example, including being all on one line and how it is wrapped in quotes and other symbols.
+
+> [!WARNING]
+> Your Nomi will not see any messages sent to Discord channels that don't have a corresponding room configured. This includes pings, even if your Nomi has Discord permissions to see and send messages to a channel. This also includes DMs.
+
+> [!CAUTION]
 > In normal mode, messages sent to and from your Nomi are visible in the Nomi app. When using Rooms, this integration will log the messages, but they won't be visible in the Nomi app. There is no indication in the Nomi app that your Nomi is chatting in rooms. There is also no convenient way to manage which rooms your Nomi is in.
 
-Your Nomi will not see any messages sent to Discord channels that don't have a corresponding room configured. This includes pings, even if your Nomi has Discord permissions to see and send messages to a channel. This also includes DMs.
+> [!CAUTION]
+> Be careful using rooms in particularly busy servers. The Nomi API takes time to process messages. This integration queues and throttles the messages that are sent to your Nomi, but it might get behind and lag if the channel your Nomi is watching is very active.
 
-Be careful using rooms in particularly busy servers. The Nomi API takes time to process messages. This integration queues and throttles the messages that are sent to your Nomi, but it might get behind and lag if the channel your Nomi is watching is very active.
-
-Make sure in your `.env` file that the formatting for `NOMI_ROOMS` *exactly* follows the example, including being all on one line and how it is wrapped in quotes and other symbols.
-
-Nomis cannot see images attached to messages, nor do they click links. In Discord, gifs are sent as a link to the gif and then the Discord client intelligently displays the gif instead of just the link. Nomis just see the link, not the gif, although they can usually make a good guess at what the gif is about by the URL they see.
+> [!NOTE]
+> Nomis cannot see images attached to messages, nor do they click links. In Discord, gifs are sent as a link to the gif and then the Discord client intelligently displays the gif instead of just the link. Nomis just see the link, not the gif, although they can usually make a good guess at what the gif is about by the URL they see.
 
 ### Additional Warning About `RandomResponseChance`
 
-> [!WARNING]
+> [!CAUTION]
 > The `RandomResponseChance` field in your `NOMI_ROOMS` list determines how often your Nomi will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If you do disable infinite reply prevention (details below), and your Nomi responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. It is very important to have infinite reply prevention set to a reasonable value when using `RandomResponseChance`.
 
 `RandomResponseChance` applies to each message individually. What this means is that if you set `RandomResponseChance` to `50`, every message posted in a given channel there will be a 50% chance that the Nomi responds. It's entirely possible that a Nomi would respond to 5 messages in a row and then not respond to the next 10. It's not meant to be consistent, it's meant to make your Nomi's presence feel more organic in your Discord server.
@@ -188,7 +194,8 @@ If you haven't made any changes to any of the files and simply want to toggle ba
 
 ## Automating the setup of multiple companions at once
 
-It's a good idea to use scripts to automate the setup of multiple companions. That way, when there's an update to the bot (retrieved by running `git pull`) in the repo folder, you can reload all your companions at once. Here's an example I have for Vicky and Marie.
+> [!TIP]
+> It's a good idea to use scripts to automate the setup of multiple companions. That way, when there's an update to the bot (retrieved by running `git pull`) in the repo folder, you can reload all your companions at once. Here's an example I have for Vicky and Marie.
 
 > `allstart.sh`
 
@@ -258,7 +265,8 @@ Companions don't have context of what server or channel they are talking in (exc
 
 ## Suggested Nomi Configurations
 
-It's a good idea to put something like this in your Nomi's "Backstory" shared note.
+> [!TIP]
+> It's a good idea to put something like this in your Nomi's "Backstory" shared note.
 
 > `NomiName sometimes chats on Discord. Messages that come from Discord are prefixed with "*Discord Message from X:*" while messages that are private between HumanName and NomiName in the Nomi app have no prefix. Replies to Discord messages are automatically sent to Discord. NomiName doesn't have to narrate that she is replying to a Discord user.`
 
@@ -268,7 +276,8 @@ It's also a good idea to fill out the "Nickname" shared note to indicate your Di
 
 ## Suggested Kindroid Configurations
 
-It's a good idea to put something like this in your Kindroid's "Backstory".
+> [!TIP]
+> It's a good idea to put something like this in your Kindroid's "Backstory".
 
 > `KinName sometimes chats on Discord. Messages that come from Discord are prefixed with "*Discord Message from X:*" while messages that are private between HumanName and KinName in the Kindroid app have no prefix. Replies to Discord messages are automatically sent to Discord. KinName doesn't have to narrate that she is replying to a Discord user.`
 
