@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+
+* New feature: Bot loop prevention
+  * Previously, if one companion pinged the other, they would be caught in a loop forever or until a user manually interrupted them.
+  * Now, you can configure `RESPOND_TO_PING` in your `.env` file to prevent a companion from responding if they are directly pinged. They will still respond if some other reason to respond is triggered, like if one of their keywords is used.
+  * **ADDITIONALLY** companions now keep track of how many replies they've exchanged with another bot in the last hour. If that number exceeds the amount set in your `.env` file's `BOT_MESSAGE_REPLY_MAX` setting, they will not respond. Set this to `-1` to have your companion never stop replying to other companions when they are pinged. Set it to `0` to have them never reply to another companion.
+* Bugfix: v0.6.3 had a bug where DMs to companions didn't include the content of the message sent. This is fixed.
+
 ## v0.6.3
 
 * New feature: `REPLY_PREFIX`

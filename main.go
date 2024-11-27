@@ -10,6 +10,7 @@ import (
     "net/http"
     "os"
     "regexp"
+    "strconv"
     "strings"
     "sync"
     "time"
@@ -19,7 +20,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.6.3"
+var version = "v0.7.1"
 
 type Companion struct {
     DiscordBotToken string
@@ -28,15 +29,18 @@ type Companion struct {
     CompanionType   string
     MessagePrefix   string
     ReplyPrefix     string
+    RespondPing     bool
     RespondRole     bool
     RespondDM       bool
     Keywords        string
+    BotReplyMax     int
     ChatStyle       string
     Rooms           string
     NomiKin         NomiKin.NomiKin
 }
 
 var companion Companion
+var tracker BotMessageTracker
 
 func (c *Companion) Setup() {
     if os.Getenv("DISCORD_BOT_TOKEN") != "" {
@@ -75,6 +79,22 @@ func (c *Companion) Setup() {
     c.MessagePrefix = os.Getenv("MESSAGE_PREFIX")
     c.ReplyPrefix = os.Getenv("REPLY_PREFIX")
 
+    if os.Getenv("RESPOND_TO_PING") != "" {
+        switch os.Getenv("RESPOND_TO_PING") {
+        case "TRUE":
+            c.RespondPing = true
+            break
+        case "FALSE":
+            c.RespondPing = false
+            break
+        default:
+            log.Fatal("Respond To Ping must be either `TRUE` or `FALSE`. Fix RESPOND_TO_PING in .env file.")
+            return
+        }
+    } else {
+        c.RespondPing = true
+    }
+
     switch os.Getenv("RESPOND_TO_ROLE_PING") {
         case "TRUE":
         c.RespondRole = true
@@ -101,6 +121,17 @@ func (c *Companion) Setup() {
 
     c.Keywords = os.Getenv("RESPONSE_KEYWORDS")
 
+    if os.Getenv("BOT_MESSAGE_REPLY_MAX") != "" {
+        num, err := strconv.Atoi(os.Getenv("BOT_MESSAGE_REPLY_MAX"))
+        if err != nil {
+            log.Fatal("Bot Message Reply Max was not set to a number. Fix BOT_MESSAGE_REPLY_MAX in .env file.")
+        } else {
+            c.BotReplyMax = num
+        }
+    } else {
+        c.BotReplyMax = 10
+    }
+
     if os.Getenv("CHAT_STYLE") == "ROOMS" {
         c.ChatStyle = "ROOMS"
     } else {
@@ -115,8 +146,80 @@ func (c *Companion) Setup() {
     }
 }
 
+type BotMessageTracker struct {
+    lock    sync.RWMutex
+    counts  map[string][]time.Time
+}
+
+func NewBotMessageTracker() BotMessageTracker {
+    return BotMessageTracker{
+        counts: make(map[string][]time.Time),
+    }
+}
+
+func (tracker *BotMessageTracker) CleanupOldMessages() {
+    tracker.lock.Lock()
+    countsCopy := make(map[string][]time.Time, len(tracker.counts))
+
+    for botID, timestamps := range tracker.counts {
+        countsCopy[botID] = append([]time.Time{}, timestamps...)
+    }
+    tracker.lock.Unlock()
+
+    threshold := time.Now().Add(-60 * time.Minute)
+    for botID, timestamps := range countsCopy {
+        var validTimestamps []time.Time
+        for _, timestamp := range timestamps {
+            if timestamp.After(threshold) {
+                validTimestamps = append(validTimestamps, timestamp)
+            }
+        }
+
+        tracker.lock.Lock()
+        tracker.counts[botID] = validTimestamps
+        tracker.lock.Unlock()
+    }
+}
+
+func (tracker *BotMessageTracker) TrackMessage(botID string) bool {
+    if companion.BotReplyMax == -1 {
+        // Companion is set to reply forever. No point tracking.
+        return true
+    }
+
+    tracker.lock.Lock()
+    defer tracker.lock.Unlock()
+
+    tracker.counts[botID] = append(tracker.counts[botID], time.Now())
+
+    if tracker.GetMessageCount(botID) > companion.BotReplyMax {
+        log.Printf("Received more than %v (BOT_MESSAGE_REPLY_MAX) messages from bot %v within the last hour. Not responding.", companion.BotReplyMax, botID)
+        tracker.counts[botID] = []time.Time{}
+        return false
+    }
+
+    return true
+}
+
+func (tracker *BotMessageTracker) GetMessageCount(botID string) int {
+    timestamps, exists := tracker.counts[botID]
+    if !exists {
+        return 0
+    }
+
+    threshold := time.Now().Add(-60 * time.Minute)
+    count := 0
+    for _, timestamp := range timestamps {
+        if timestamp.After(threshold) {
+            count++
+        }
+    }
+
+    return count
+}
+
 func updateMessage(s *discordgo.Session, m *discordgo.MessageCreate) string {
-    updatedMessage := ""
+    updatedMessage := m.Content
 
     var err error
     if m.GuildID != "" {
@@ -236,10 +339,12 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     respondToThis := false
 
     // Is the companion mentioned or is this a reply to their message?
-    for _, user := range m.Mentions {
-        if user.ID == s.State.User.ID {
-            respondToThis = true
-            break
+    if companion.RespondPing {
+        for _, user := range m.Mentions {
+            if user.ID == s.State.User.ID {
+                respondToThis = true
+                break
+            }
         }
     }
 
@@ -306,6 +411,20 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     }
 
     if respondToThis {
+        loopBreak := false
+        if m.Author.Bot {
+            reply := tracker.TrackMessage(m.Author.ID)
+            if !reply {
+                // We've passed our threshold for messages from this bot within the last hour
+                loopBreak = true
+            }
+        }
+
+        if loopBreak && !(companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS") {
+            // Breaking the loop and don't worry about sending a message to the Nomi Room
+            return nil
+        }
+
         updatedMessage := updateMessage(s, m)
 
         var err error
@@ -314,25 +433,29 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
 
         // set the typing indicator
         stopTyping := make(chan bool)
-        go func() {
-            for {
-                select {
-                case <-stopTyping:
-                    return
-                default:
-                    s.ChannelTyping(m.ChannelID)
-                    time.Sleep(5 * time.Second) // Adjust the interval as needed
+        if !loopBreak {
+            go func() {
+                for {
+                    select {
+                    case <-stopTyping:
+                        return
+                    default:
+                        s.ChannelTyping(m.ChannelID)
+                        time.Sleep(5 * time.Second) // Adjust the interval as needed
+                    }
                 }
-            }
-        }()
+            }()
+        }
 
         switch companion.CompanionType {
         case "NOMI":
             if companion.ChatStyle == "ROOMS" {
                 roomId := Rooms[m.ChannelID].Uuid
                 _, err = companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
-                time.Sleep(3 * time.Second) // Avoid Nomi not ready for message error
-                companionReply, err = companion.NomiKin.RequestNomiRoomReply(&roomId, &companion.NomiKin.CompanionId)
+                if !loopBreak {
+                    time.Sleep(3 * time.Second) // Avoid Nomi not ready for message error
+                    companionReply, err = companion.NomiKin.RequestNomiRoomReply(&roomId, &companion.NomiKin.CompanionId)
+                }
             } else {
                 companionReply, err = companion.NomiKin.SendNomiMessage(&updatedMessage)
             }
@@ -385,6 +508,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
         return
     }
 
+
     if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
         // If we're in Rooms mode, drop messages for which we don't have a room setup for
         if Rooms[m.ChannelID].Uuid == "" {
@@ -425,6 +549,7 @@ func main() {
     }
 
     companion.Setup()
+    tracker = NewBotMessageTracker()
 
     dg, err := discordgo.New("Bot " + companion.DiscordBotToken)
     if err != nil {
@@ -435,6 +560,14 @@ func main() {
     dg.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
 
     dg.AddHandler(messageCreate)
+    dg.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+        go func() {
+            for {
+                time.Sleep(10 * time.Minute)
+                tracker.CleanupOldMessages()
+            }
+        }()
+    })
 
     err = dg.Open()
     if err != nil {
