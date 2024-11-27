@@ -50,7 +50,8 @@ You need an instance of this Discord bot per AI companion you wish you invite to
 
 Nomi.ai has a feature called "Rooms" which function like a group chat. Your Nomi will be aware of all the messages sent in a specified Discord channel, but still only respond when they normally would (when they are pinged, or when one of their keywords is used) or by a configurable random chance. Kindroid does not have this feature at this time.
 
-> [!WARNING] When in Rooms mode, your Nomi will ignore all messages that occur in a Discord channel that they do not have a corresponding Room for. That means that even if your Nomi has permissions on Discord to see a certain channel, and you ping them in that channel, if you haven't setup that Channel as a Room (details on how to do that below), your Nomi will ignore that ping. This means your Nomi will also ignore DMs when in Rooms mode, regardless of the setting you choose for `RESPOND_TO_DIRECT_MESSAGE` in your `.env` file.
+> [!WARNING]
+> When in Rooms mode, your Nomi will ignore all messages that occur in a Discord channel that they do not have a corresponding Room for. That means that even if your Nomi has permissions on Discord to see a certain channel, and you ping them in that channel, if you haven't setup that Channel as a Room (details on how to do that below), your Nomi will ignore that ping. This means your Nomi will also ignore DMs when in Rooms mode, regardless of the setting you choose for `RESPOND_TO_DIRECT_MESSAGE` in your `.env` file.
 
 To setup Rooms functionality, take a look at the updated `.env.example` file. There are two new settings to be aware of.
 
@@ -96,7 +97,8 @@ When starting up this integration, if the room already exists, your Nomi will be
 
 ## Warning and Notes
 
-> [!IMPORTANT] In normal mode, messages sent to and from your Nomi are visible in the Nomi app. When using Rooms, this integration will log the messages, but they won't be visible in the Nomi app. There is no indication in the Nomi app that your Nomi is chatting in rooms. There is also no convenient way to manage which rooms your Nomi is in.
+> [!IMPORTANT]
+> In normal mode, messages sent to and from your Nomi are visible in the Nomi app. When using Rooms, this integration will log the messages, but they won't be visible in the Nomi app. There is no indication in the Nomi app that your Nomi is chatting in rooms. There is also no convenient way to manage which rooms your Nomi is in.
 
 Your Nomi will not see any messages sent to Discord channels that don't have a corresponding room configured. This includes pings, even if your Nomi has Discord permissions to see and send messages to a channel. This also includes DMs.
 
@@ -231,9 +233,11 @@ When the maximum companion response threshold is reached, it is immediately rese
   * This is per conversation partner. If your companion is having conversations with two different companions, their infinite loop cut-off will be tracked independently.
   * The default value is `10` if a value is not provided. This is a pretty conservative value. If you are trying to have a long running interaction between two companions, you will absolutely want to increase this number (or set it to `-1`) otherwise you or another user will have to prompt the companions to continue their conversation when it is halted.
 
-> [!WARNING] In Normal mode, when a companion's bot max reply is triggered, they do not see the last message that was sent, this is because sending them that message would require the companion to respond.
+> [!WARNING]
+> In Normal mode, when a companion's bot max reply is triggered, they do not see the last message that was sent, this is because sending them that message would require the companion to respond.
 
-> [!IMPORTANT] In Nomi Rooms mode, the message is still sent to a room, but the companion is instructed not to respond.
+> [!IMPORTANT]
+> In Nomi Rooms mode, the message is still sent to a room, but the companion is instructed not to respond.
 
 # Updating
 
