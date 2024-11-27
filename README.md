@@ -110,7 +110,8 @@ Nomis cannot see images attached to messages, nor do they click links. In Discor
 
 ### Additional Warning About `RandomResponseChance`
 
-⚠️⚠️ The `RandomResponseChance` field in your `NOMI_ROOMS` list determines how often your Nomi will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If your Nomi responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. They will continue conversing forever until they are interrupted, either by one of them being made unable to respond (timed out, kicked from the server, etc.) or their Docker container is stopped, breaking the reply chain. ⚠️
+> [!WARNING]
+> The `RandomResponseChance` field in your `NOMI_ROOMS` list determines how often your Nomi will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If you do disable infinite reply prevention (details below), and your Nomi responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. It is very important to have infinite reply prevention set to a reasonable value when using `RandomResponseChance`.
 
 `RandomResponseChance` applies to each message individually. What this means is that if you set `RandomResponseChance` to `50`, every message posted in a given channel there will be a 50% chance that the Nomi responds. It's entirely possible that a Nomi would respond to 5 messages in a row and then not respond to the next 10. It's not meant to be consistent, it's meant to make your Nomi's presence feel more organic in your Discord server.
 
