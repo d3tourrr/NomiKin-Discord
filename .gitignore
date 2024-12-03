@@ -9,3 +9,7 @@ go.work
 go.work.sum
 .env*
 !.env.example
+*.env
+!example.env
+*.bak
+!example.bak

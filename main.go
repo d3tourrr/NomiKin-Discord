@@ -2,6 +2,7 @@
 package main
 
 import (
+    "bufio"
     "encoding/json"
     "fmt"
     "io/ioutil"
@@ -9,18 +10,21 @@ import (
     "math/rand"
     "net/http"
     "os"
+    "os/signal"
+    "reflect"
     "regexp"
     "strconv"
     "strings"
+    "syscall"
     "sync"
     "time"
 
     "github.com/bwmarrin/discordgo"
-    "github.com/joho/godotenv"
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
 var version = "v0.7.1"
+var companions = make(map[*discordgo.Session]*Companion)
 
 type Companion struct {
     DiscordBotToken string
@@ -37,113 +41,143 @@ type Companion struct {
     ChatStyle       string
     Rooms           string
     NomiKin         NomiKin.NomiKin
+    Tracker         BotMessageTracker
+    Queue           MessageQueue
 }
 
-var companion Companion
-var tracker BotMessageTracker
+func printStructFields(c *Companion) {
+    val := reflect.ValueOf(c).Elem()
+    typ := reflect.TypeOf(c).Elem()
 
-func (c *Companion) Setup() {
-    if os.Getenv("DISCORD_BOT_TOKEN") != "" {
-        c.DiscordBotToken = os.Getenv("DISCORD_BOT_TOKEN")
-    } else {
-        log.Fatal("Discord Bot Token not found. Set DISCORD_BOT_TOKEN in .env file.")
+    fmt.Printf("Companion: %v\n", c.CompanionId)
+    for i := 0; i < val.NumField(); i++ {
+        field := val.Field(i)
+        fieldName := typ.Field(i).Name
+        fieldValue := field.Interface()
+
+        fmt.Printf("  %s: %v\n", fieldName, fieldValue)
+    }
+}
+
+func (c *Companion) Setup(envFile string) {
+    f, err := os.Open(envFile)
+    if err != nil {
+        log.Fatalf("Error loading %s: %v\n", envFile, err)
         return
     }
 
-    if os.Getenv("COMPANION_TOKEN") != "" {
-        c.CompanionToken = os.Getenv("COMPANION_TOKEN")
-    } else {
-        log.Fatal("Companion Token not found. Set COMPANION_TOKEN in .env file.")
-        return
-    }
+    scanner := bufio.NewScanner(f)
+    envVars := make(map[string]string)
+    
+    for scanner.Scan() {
+        line := strings.TrimSpace(scanner.Text())
 
-    if os.Getenv("COMPANION_ID") != "" {
-        c.CompanionId = os.Getenv("COMPANION_ID")
-    } else {
-        log.Fatal("Companion ID not found. Set COMPANION_ID in .env file.")
-        return
-    }
-
-    if os.Getenv("COMPANION_TYPE") != "" {
-        if os.Getenv("COMPANION_TYPE") != "NOMI" && os.Getenv("COMPANION_TYPE") != "KINDROID" {
-            log.Fatal("Companion Type must be set to either `NOMI` or `KINDROID`. Set COMPANION_TYPE correctly in .env file.")
-            return
-        } else {
-            c.CompanionType = os.Getenv("COMPANION_TYPE")
+        if len(line) == 0 || line[0] == '#' {
+            continue
         }
-    } else {
-        log.Fatal("Companion Type not found. Set COMPANION_TYPE in .env file.")
-        return
+
+        parts := strings.SplitN(line, "=", 2)
+        if len(parts) != 2 {
+            continue
+        }
+
+        key := strings.TrimSpace(parts[0])
+        value := strings.TrimSpace(parts[1])
+        envVars[key] = value
     }
 
-    c.MessagePrefix = os.Getenv("MESSAGE_PREFIX")
-    c.ReplyPrefix = os.Getenv("REPLY_PREFIX")
+    if err := scanner.Err(); err != nil {
+        log.Fatalf("Error reading .env file: %v", err)
+    }
 
-    if os.Getenv("RESPOND_TO_PING") != "" {
-        switch os.Getenv("RESPOND_TO_PING") {
-        case "TRUE":
-            c.RespondPing = true
-            break
-        case "FALSE":
-            c.RespondPing = false
-            break
-        default:
-            log.Fatal("Respond To Ping must be either `TRUE` or `FALSE`. Fix RESPOND_TO_PING in .env file.")
-            return
+    for key, value := range envVars {
+        switch key {
+        case "DISCORD_BOT_TOKEN":
+            c.DiscordBotToken = value
+        case "COMPANION_TOKEN":
+            c.CompanionToken = value
+        case "COMPANION_ID":
+            c.CompanionId = value
+        case "COMPANION_TYPE":
+            if value != "NOMI" && value != "KINDROID" {
+                log.Fatalf("Companion Type must be set to either `NOMI` or `KINDROID`. Set COMPANION_TYPE correctly in %v", envFile)
+            } else {
+                c.CompanionType = value
+            }
+        case "MESSAGE_PREFIX":
+            c.MessagePrefix = value
+        case "REPLY_PREFIX":
+            c.ReplyPrefix = value
+        case "RESPOND_TO_PING":
+            c.RespondPing, err = strconv.ParseBool(value)
+            if err != nil {
+                log.Fatalf("RESPOND_TO_PING must be set to either TRUE or FALSE. Set RESPOND_TO_PING correctly in %v", envFile)
+            }
+        case "RESPOND_TO_ROLE_PING":
+            c.RespondRole, err = strconv.ParseBool(value)
+            if err != nil {
+                log.Fatalf("RESPOND_TO_ROLE_PING must be set to either TRUE or FALSE. Set RESPOND_TO_ROLE_PING correctly in %v", envFile)
+            }
+        case "RESPOND_TO_DIRECT_MESSAGE":
+            c.RespondRole, err = strconv.ParseBool(value)
+            if err != nil {
+                log.Fatalf("RESPOND_TO_DIRECT_MESSAGE must be set to either TRUE or FALSE. Set RESPOND_TO_DIRECT_MESSAGE correctly in %v", envFile)
+            }
+        case "RESPONSE_KEYWORDS":
+            c.Keywords = value
+        case "BOT_MESSAGE_REPLY_MAX":
+            c.BotReplyMax, err = strconv.Atoi(value)
+            if err != nil {
+                log.Fatalf("Bot Message Reply Max was not set to a number. Fix BOT_MESSAGE_REPLY_MAX in %v", envFile)
+            }
+        case "CHAT_STYLE":
+            if value == "\"ROOMS\"" {
+                c.ChatStyle = "ROOMS"
+            } else {
+                c.ChatStyle = "NORMAL"
+            }
+        case "NOMI_ROOMS":
+            c.Rooms = strings.Trim(value, "'")
         }
-    } else {
+    }
+
+    if _, exists := envVars["RESPOND_TO_PING"]; !exists {
         c.RespondPing = true
     }
 
-    switch os.Getenv("RESPOND_TO_ROLE_PING") {
-        case "TRUE":
-        c.RespondRole = true
-        break
-        case "FALSE":
-        c.RespondRole = false
-        break
-        default:
-        log.Fatal("Respond To Role Ping must be either `TRUE` or `FALSE`. Fix RESPOND_TO_ROLE_PING in .env file.")
-        return
-    }
-
-    switch os.Getenv("RESPOND_TO_DIRECT_MESSAGE") {
-        case "TRUE":
-        c.RespondDM = true
-        break
-        case "FALSE":
-        c.RespondDM = false
-        break
-        default:
-        log.Fatal("Respond To DM must be either `TRUE` or `FALSE`. Fix RESPOND_TO_DIRECT_MESSAGE in .env file.")
-        return
-    }
-
-    c.Keywords = os.Getenv("RESPONSE_KEYWORDS")
-
-    if os.Getenv("BOT_MESSAGE_REPLY_MAX") != "" {
-        num, err := strconv.Atoi(os.Getenv("BOT_MESSAGE_REPLY_MAX"))
-        if err != nil {
-            log.Fatal("Bot Message Reply Max was not set to a number. Fix BOT_MESSAGE_REPLY_MAX in .env file.")
-        } else {
-            c.BotReplyMax = num
-        }
-    } else {
+    if _, exists := envVars["BOT_MESSAGE_REPLY_MAX"]; !exists {
         c.BotReplyMax = 10
     }
 
-    if os.Getenv("CHAT_STYLE") == "ROOMS" {
-        c.ChatStyle = "ROOMS"
-    } else {
+    if _, exists := envVars["CHAT_STYLE"]; !exists {
         c.ChatStyle = "NORMAL"
     }
-
-    c.Rooms = os.Getenv("NOMI_ROOMS")
 
     c.NomiKin = NomiKin.NomiKin{
         ApiKey: c.CompanionToken,
         CompanionId: c.CompanionId,
     }
+
+    c.Tracker = NewBotMessageTracker()
+
+    log.Printf("Finished setup of companion %v from file %v\n", c.CompanionId, envFile)
+    printStructFields(c)
+}
+
+func getEnvFiles(dir string) ([]string, error) {
+    files, err := ioutil.ReadDir(dir)
+    if err != nil {
+        return nil, err
+    }
+
+    var envFiles []string
+    for _, file := range files {
+        if strings.HasSuffix(file.Name(), ".env") {
+            envFiles = append(envFiles, dir + "/" + file.Name())
+        }
+    }
+
+    return envFiles, nil
 }
 
 type BotMessageTracker struct {
@@ -181,7 +215,7 @@ func (tracker *BotMessageTracker) CleanupOldMessages() {
     }
 }
 
-func (tracker *BotMessageTracker) TrackMessage(botID string) bool {
+func (tracker *BotMessageTracker) TrackMessage(botID string, companion *Companion) bool {
     if companion.BotReplyMax == -1 {
         // Companion is set to reply forever. No point tracking.
         return true
@@ -218,7 +252,7 @@ func (tracker *BotMessageTracker) GetMessageCount(botID string) int {
     return count
 }
 
-func updateMessage(s *discordgo.Session, m *discordgo.MessageCreate) string {
+func updateMessage(s *discordgo.Session, m *discordgo.MessageCreate, companion *Companion) string {
     updatedMessage := m.Content
 
     var err error
@@ -290,6 +324,7 @@ var queue MessageQueue
 type QueuedMessage struct {
     Message   *discordgo.MessageCreate
     Session   *discordgo.Session
+    Companion *Companion
 }
 
 type MessageQueue struct {
@@ -324,7 +359,7 @@ func (q *MessageQueue) ProcessMessages() {
             continue
         }
 
-        err := sendMessageToCompanion(queuedMessage.Session, queuedMessage.Message)
+        err := sendMessageToCompanion(queuedMessage.Session, queuedMessage.Message, queuedMessage.Companion)
         if err != nil {
             log.Printf("Failed to send message to Companion API: %v", err)
             q.Enqueue(queuedMessage) // Requeue the message if failed
@@ -335,7 +370,7 @@ func (q *MessageQueue) ProcessMessages() {
 }
 
 // Message formatting and handling
-func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) error {
+func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate, companion *Companion) error {
     respondToThis := false
 
     // Is the companion mentioned or is this a reply to their message?
@@ -413,7 +448,7 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     if respondToThis {
         loopBreak := false
         if m.Author.Bot {
-            reply := tracker.TrackMessage(m.Author.ID)
+            reply := companion.Tracker.TrackMessage(m.Author.ID, companion)
             if !reply {
                 // We've passed our threshold for messages from this bot within the last hour
                 loopBreak = true
@@ -425,7 +460,7 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
             return nil
         }
 
-        updatedMessage := updateMessage(s, m)
+        updatedMessage := updateMessage(s, m, companion)
 
         var err error
         companionReply := ""
@@ -491,7 +526,7 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     // TODO: Clean this up, duplicated code to sanitize and send a message... In fact, there's probably plenty of
     // duplicated and messy code to clean up...
     if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
-        updatedMessage := updateMessage(s, m)
+        updatedMessage := updateMessage(s, m, companion)
         roomId := Rooms[m.ChannelID].Uuid
         _, err := companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
         if err != nil {
@@ -502,130 +537,141 @@ func sendMessageToCompanion(s *discordgo.Session, m *discordgo.MessageCreate) er
     return nil
 }
 
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-    if m.Author.ID == s.State.User.ID {
-        // We don't have to send our companion their own messages
-        return
-    }
-
-
-    if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
-        // If we're in Rooms mode, drop messages for which we don't have a room setup for
-        if Rooms[m.ChannelID].Uuid == "" {
+func messageCreate(companion *Companion) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+    return func(s *discordgo.Session, m *discordgo.MessageCreate) {
+        log.Printf("Handling message for bot with companion: %s\n", companion.CompanionId)
+        if m.Author.ID == s.State.User.ID {
+            // We don't have to send our companion their own messages
             return
         }
-    }
 
-    message := QueuedMessage{
-        Message: m,
-        Session: s,
-    }
+        if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
+            // If we're in Rooms mode, drop messages for which we don't have a room setup for
+            if Rooms[m.ChannelID].Uuid == "" {
+                return
+            }
+        }
 
-    queue.Enqueue(message)
+        message := QueuedMessage{
+            Message: m,
+            Session: s,
+            Companion: companion,
+        }
+
+        queue.Enqueue(message)
+    }
 }
 
 func main() {
-    // Support for multiple .env files named .env.companionName
-    namedEnvFile := false
-    companionName := os.Getenv("COMPANION_NAME")
-    if companionName != "" {
-        namedEnvFile = true
-        err := godotenv.Load(".env." + companionName)
-        if err != nil {
-            namedEnvFile = false
-            log.Printf("Error loading .env.%v file: %v", companionName, err)
-        } else {
-            log.Printf("Loaded env file: .env.%v", companionName)
-        }
-    }
-    if !namedEnvFile {
-        // Fall back to .env file if there's no .env.companionName
-        err := godotenv.Load()
-        if err != nil {
-            log.Printf("Error loading .env file: %v", err)
-        } else {
-            log.Printf("Loaded env file: .env")
-        }
-    }
-
-    companion.Setup()
-    tracker = NewBotMessageTracker()
-
-    dg, err := discordgo.New("Bot " + companion.DiscordBotToken)
+    envFiles, err := getEnvFiles("./bots")
     if err != nil {
-        log.Fatalf("Error creating Discord session: %v", err)
+        log.Fatalf("Failed to read env files: %v", err)
+        return
     }
 
-    // For keyword triggering and Nomi room support
-    dg.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
+    log.Printf("Env files: %v\n", envFiles)
 
-    dg.AddHandler(messageCreate)
-    dg.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-        go func() {
-            for {
-                time.Sleep(10 * time.Minute)
-                tracker.CleanupOldMessages()
-            }
-        }()
-    })
+    var wg sync.WaitGroup
+    for _, envFile := range envFiles {
+        wg.Add(1)
+        go func(file string) {
+            defer wg.Done()
 
-    err = dg.Open()
-    if err != nil {
-        log.Fatalf("Error opening Discord connection: %v", err)
-    }
+            companion := &Companion{}
+            companion.Setup(file)
 
-    // For Nomi rooms
-    if os.Getenv("COMPANION_TYPE") == "NOMI" {
-        companion.NomiKin.Init()
-
-        if companion.ChatStyle == "ROOMS" {
-            roomsString := companion.Rooms
-            if roomsString == "" {
-                log.Fatal("Nomi is in ROOMS mode but no rooms were provided.")
+            dg, err := discordgo.New("Bot " + companion.DiscordBotToken)
+            if err != nil {
+                log.Fatalf("Error creating Discord session: %v", err)
             }
 
-            var rooms []Room
-            if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
-                log.Fatalf("Error parsing NOMI_ROOMS: %v", err)
+            // For keyword triggering and Nomi room support
+            dg.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
+
+            dg.AddHandler(messageCreate(companion))
+
+            dg.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+                go func() {
+                    for {
+                        time.Sleep(10 * time.Minute)
+                        companion.Tracker.CleanupOldMessages()
+                    }
+                }()
+            })
+
+            err = dg.Open()
+            if err != nil {
+                log.Fatalf("Error opening Discord connection: %v", err)
             }
 
-            Rooms = make(map[string]Room)
+            // For Nomi rooms
+            if companion.CompanionType == "NOMI" {
+                companion.NomiKin.Init()
 
-            for _, room := range rooms {
-                log.Printf("Creating/adding Nomi %v to room\n Name: %v\n Note: %v\n Backchanneling: %v\n", companion.CompanionId, room.Name, room.Note, room.Backchanneling)
-                if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
-                    log.Fatalf("RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
-                    return
+                if companion.ChatStyle == "ROOMS" {
+                    roomsString := companion.Rooms
+                    if roomsString == "" {
+                        log.Fatalf("Companion %v is in ROOMS mode but no rooms were provided.", companion.CompanionId)
+                    }
+
+                    var rooms []Room
+                    if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
+                        log.Fatalf("Companion %v Error parsing NOMI_ROOMS: %v", companion.CompanionId, err)
+                    }
+
+                    Rooms = make(map[string]Room)
+
+                    for _, room := range rooms {
+                        log.Printf("Creating/adding Nomi %v to room: %v\n", companion.CompanionId, room.Name)
+                        if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
+                            log.Fatalf("RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
+                            return
+                        }
+
+                        r, err := companion.NomiKin.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{companion.CompanionId})
+                        if err != nil {
+                            log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", companion.CompanionId, room.Name, err)
+                        }
+
+                        Rooms[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
+                    }
                 }
-
-                r, err := companion.NomiKin.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{companion.CompanionId})
-                if err != nil {
-                    log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", companion.CompanionId, room.Name, err)
-                }
-
-                Rooms[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
             }
-        }
+
+            updateStatus(dg)
+            statusTicker := time.NewTicker(10 * time.Minute)
+            defer statusTicker.Stop()
+            go func() {
+                for {
+                    select {
+                    case <-statusTicker.C:
+                        updateStatus(dg)
+                    }
+                }
+            }()
+
+            log.Printf("Assigning companion %s to bot %s", companion.CompanionId, dg.State.User.ID)
+            companions[dg] = companion
+
+            go queue.ProcessMessages()
+
+            fmt.Printf("Bot for Companion %v is now running.\n", companion.CompanionId)
+            select {}
+        }(envFile)
     }
 
-    updateStatus(dg)
-    statusTicker := time.NewTicker(10 * time.Minute)
-    defer statusTicker.Stop()
-    go func() {
-        for {
-            select {
-            case <- statusTicker.C:
-                updateStatus(dg)
-            }
-        }
-    }()
+    wg.Wait()
+}
 
+func waitForShutdown(bots []*discordgo.Session) {
+    stop := make(chan os.Signal, 1)
+    signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-    // Kick off message processing
-    go queue.ProcessMessages()
-
-    fmt.Println("Bot is now running. Press CTRL+C to exit.")
-    select {}
+    <-stop
+    for _, bot := range bots {
+        bot.Close()
+    }
+    log.Println("All bots stopped.")
 }
 
 func updateStatus(dg *discordgo.Session) {
@@ -652,7 +698,5 @@ func updateStatus(dg *discordgo.Session) {
     })
     if err != nil {
         log.Printf("Error setting status: %v", err)
-    } else {
-        log.Printf("Status update successful: %v", discordStatus)
     }
 }
