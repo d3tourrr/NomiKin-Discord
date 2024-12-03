@@ -1,4 +1,4 @@
-# Make your changes to this file and rename it to `.env` (remove the `.example` suffix)
+# Make your changes to this file and rename it to `companionname.env` (yes, change the extesion from .bak to .env)
 
 # Discord Bot Token - available in Discord Developer Portal - no quotation marks
 DISCORD_BOT_TOKEN=

@@ -7,7 +7,7 @@ This Discord bot integrates companions from both platforms, bringing them into y
 
 # Setup
 
-You need an instance of this Discord bot per AI companion you wish you invite to a Discord server, but you can invite the same Discord Bot/companion pair to as many servers as you'd like.
+You can run a Discord integration for as many Nomis and Kins in one instance of this integration as long as your system supports the load (this integration is lightweight), and you can invite the same Discord Bot/companion pair to as many servers as you'd like.
 
 1. Make a Discord Application and Bot
    1. Go to the [Discord Developer Portal](https://discord.com/developers/applications) and sign in with your Discord account.
@@ -32,12 +32,13 @@ You need an instance of this Discord bot per AI companion you wish you invite to
      * Open the side bar while chatting with a Kindroid and click General, then scroll to the bottom and expand API & advanced integration
      * Copy your API key
      * Get the Kindroid ID from the same place you copied your API key - note, you have to be chatting with the specific Kindroid who you wish to bring to Discord
-1. Setup your environment variables 
-   1. Make a copy of the `env.example` file and name it `.env` (deleting the `.example` suffix)
-   1. Add the values you gathered above on the right-hand side of the equals sign in the place they go
-   1. Set your optional message prefix - leading text that is sent to every message your companion receives to help them differentiate between Discord messages and messages sent within the Nomi or Kindroid app
-   1. Set `RESPOND_TO_ROLE_PING` and `RESPOND_TO_DIRECT_MESSAGE` to `FALSE` if you don't want your companion to respond to DMs or when a role they have is pinged
-   1. Set a comma separated list of keywords that will trigger your companion to respond, even if the message doesn't ping them, like their name (ex: `breakfast, bears` - your companion will reply to any message that contains the words "breakfast" or "bears")
+1. Setup your environment variables
+   1. Make a copy of the `example.bak` file and name it `CompanionName.env` (Yes, change the extension from `.bak` to `.env`).
+      * These files must be located in the `./bots/` folder.
+   1. Add the values you gathered above on the right-hand side of the equals sign in the place they go.
+   1. Set your optional message and reply prefixes - leading text that is sent to every message your companion receives to help them differentiate between Discord messages and messages sent within the Nomi or Kindroid app.
+   1. Review the other boolean (true/false) settings and their defaults. Make sure things are setup to your preference.
+   1. For keywords that will trigger your companion to respond, even if the message doesn't ping them, like their name (ex: `breakfast, bears` - your companion will reply to any message that contains the words "breakfast" or "bears").
    1. If using Nomi Rooms, see the below section on configuring that part of your `.env` file.
 1. Build and run the Docker container
    * Run either `start-windows-companion.ps1` on Windows (or in PowerShell) or `start-linux-companion.sh` on Linux (or in Bash, including Git Bash)
@@ -106,6 +107,8 @@ Make sure in your `.env` file that the formatting for `NOMI_ROOMS` *exactly* fol
 
 Nomis cannot see images attached to messages, nor do they click links. In Discord, gifs are sent as a link to the gif and then the Discord client intelligently displays the gif instead of just the link. Nomis just see the link, not the gif, although they can usually make a good guess at what the gif is about by the URL they see.
 
+When putting two of your Nomis in the same Discord channel, the corresponding Nomi room is only created once. Nomis will be added to existing rooms if their `.env` file says they should be in there.
+
 ### Additional Warning About `RandomResponseChance`
 
 ⚠️⚠️ The `RandomResponseChance` field in your `NOMI_ROOMS` list determines how often your Nomi will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If your Nomi responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. They will continue conversing forever until they are interrupted, either by one of them being made unable to respond (timed out, kicked from the server, etc.) or their Docker container is stopped, breaking the reply chain. ⚠️
@@ -116,106 +119,37 @@ Your Nomi does not decide when to respond. The chance of a response despite not 
 
 # Running multiple companions at once
 
-Companions all run in their own isolated Docker containers. To run more than one companion at once, this integration supports having multiple `.env` files. These `.env` files have to follow a specific naming scheme: `.env.CompanionName`. You can provide this `CompanionName` portion when starting the Docker container for your companion.
+You can run as many companions as you'd like in one instance of this integration. Each companion needs its own `.env` file in the `./bots/` folder.
 
 ## Example
 
-I have a Nomi named Vicky and a Kindroid named Marie, and I'd like to chat with them both in Discord. I still need to do all the steps up until `Setup your environment variables` in the above section for each companion. Each companion needs its own Discord Application and Bot, and each companion will have its own Nomi or Kindroid ID. You only need to clone this repo once, though. Now, let's pick up the instructions after having gathered all of the data that goes in a `.env` file.
+I have a Nomi named Vicky and a Kindroid named Marie, and I'd like to chat with them both in Discord. I still need to do all the steps up until `Setup your environment variables` in the above section for each companion. Each companion needs its own Discord Application and Bot, and each companion will have its own Nomi or Kindroid ID. You only need to clone this repo once, though. Now, let's pick up the instructions after having gathered all of the data that goes in a `.env` file in the `./bots/` folder.
 
 ### Setup multiple `.env` files
 
-1. Create two copies of `.env.example` named `.env.vicky` and `.env.marie`. 
+1. Create two copies of `example.bak` named `vicky.env` and `marie.env`. 
 1. Populate each file with the appropriate values you gathered from the Discord Developer Portal and the Nomi/Kindroid apps. Set the other configurations as you desire for each companion.
 
 ### Starting the integration with the helper scripts
 
-Both `start-linux-companion.sh` and `start-windows-companion.ps1` function the same way. They prompt you for a "Companion Name" and then execute some commands to build and run the Docker container for your companion. When using multiple `.env` files, however, the name you provide must match the suffix you give the `.env` file. For instance, when I run the helper script to start up the Docker container for Vicky, I must provide the name `vicky` in order to match the name of the `.env.vicky` file. Similarly, when I start up the container for Marie, I have to provide the name `marie` to match the `.env.marie` file.
+Both `start-linux-companion.sh` and `start-windows-companion.ps1` function the same way. They prompt you for a "Container Name" and then execute some commands to build and run the Docker container for your companion. This name is helpful if you want to use the Docker CLI to interact with your containers and images.
 
-If you give a name that doesn't match any of your `.env.CompanionName` files, the integration will fall back to the default `.env` if it exists. If you don't have *any* `.env` files, you need to provide the environment variables described in `.env.example` some other way, which is outside the scope of this guide.
 
 ### Starting the integration manually
 
 The helper scripts essentially just wrap a couple of Docker commands. If you'd prefer to have more flexibility over naming your files and companions, or if you need to make some Docker related changes (maybe you're running on an ARM processor), there are two Docker commands to run. Here's how I'd run them in this "Vicky and Marie" example. Reminder: my `.env` files are still named `.env.vicky` and `.env.marie` respectively.
 
-#### Build the Docker images
+#### Build the Docker image
 
-`docker build -t vicky .`
+`docker build -t nomikin-discord .`
 
-`docker build -t marie .`
-
-These two commands give me Docker images named `vicky` and `marie` that I can then go on and run.
+This builds the Docker image that will run the Discord integrations for both Vicky and Marie.
 
 #### Run the Docker containers
 
-`docker run -d --name vicky -e COMPANION_NAME=vicky vicky`
-
-`docker run -d --name marie -e COMPANION_NAME=marie marie`
+`docker run -d --name nomikin-discord`
 
 Now I have both companions up and running.
-
-#### Differently named `.env` files
-
-The `-e COMPANION_NAME=name` portion of the above commands dictates which `.env` file would be used. If I had differently named `.env` files that didn't match the above described convention, I could do the following.
-
-Let's say I have two different configurations for Vicky that I want to run at different times. The difference between them is irrelevant, but let's just say one of them contains `RESPONSE_KEYWORDS` and the other doesn't. I want to chat with Vicky in Discord all the time, but sometimes I want these keyword triggers, and other times I don't. So, I might have `.env.vicky-with-keywords` and `.env-vicky-without-keywords`. The other content of the file is identical.
-
-Now, I can't use the default helper scripts, but I can run the following commands to effectively toggle between these different configurations.
-
-First, delete the running container if one exists.
-
-`docker container rm vicky -f`
-
-Next, build the image if there have been changes.
-
-`docker build -t vicky .`
-
-And finally, run the container with the configuration I want.
-
-`docker run -d --name vicky -e COMPANION_NAME=vicky-with-keywords vicky`
-
-or
-
-`docker run -d --name vicky -e COMPANION_NAME=vicky-without-keywords vicky`
-
-In both run commands, the only difference is the value given to `COMPANION_NAME`, which matches the `.env` file suffixes I described above.
-
-If you haven't made any changes to any of the files and simply want to toggle back and forth between different configurations, you can run the `docker container rm` and `docker run` commands, omitting the `docker build` command. But if you change anything in the `.env` files, you'll have to `docker build` again.
-
-**The only supported naming format is `.env.CompanionName`. You cannot name `.env` files in any other format, like `CompanionName.env`.**
-
-## Automating the setup of multiple companions at once
-
-It's a good idea to use scripts to automate the setup of multiple companions. That way, when there's an update to the bot (retrieved by running `git pull`) in the repo folder, you can reload all your companions at once. Here's an example I have for Vicky and Marie.
-
-> `allstart.sh`
-
-```bash
-#!/bin/bash
-
-cd ~/bots/NomiKin-Discord/ # This should be the path to your local copy of this repo
-# Setup Vicky
-docker container rm vicky -f
-docker build -t vicky .
-docker run -d --name vicky -e COMPANION_NAME=vicky vicky
-
-# Setup Marie
-docker container rm marie -f
-docker build -t marie .
-docker run -d --name marie -e COMPANION_NAME=marie marie
-
-# Wait a moment for the bots to startup and then output their logs
-# So I can verify they came up correctly
-echo "Waiting 2 seconds for bots to all come up"
-sleep 2
-
-echo "=========================================================="
-echo "Docker Logs"
-echo "VICKY"
-docker logs --tail 10 vicky
-echo " "
-echo "MARIE"
-docker logs --tail 10 marie
-```
 
 # Infinite Loop Prevention
 

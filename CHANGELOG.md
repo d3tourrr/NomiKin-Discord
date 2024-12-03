@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.1
+
+> [!WARNING]
+> Breaking Changes!
+
+* **MAJOR CHANGE**
+  * You can now run all your companions from one instance of this integration - in one Docker container.
+  * Put your `.env` files in the `./bots/` folder and they will all be automatically setup.
+  * `.env` files now have a different naming format. They are now `CompanionName.env` instead of `.env.CompanionName`
+  * No more support for a default `.env` file. All `.env` files need to have a name, even if you're only running one companion.
+  * Run Nomis and Kindroids from the same instance.
+* Nomi Rooms improvements when two Nomis are in the same Room (requires them to be on the same user's Nomi account).
+  * They will now make sure that messages from Discord users are only forwarded to the Room once.
+  * They will not forward messages from other Nomis in the same Room to the Room.
+  * These two changes mean that when you're running multiple Nomis in the same Room, there's no duplication of messages sent to the Room.
+
 ## 0.7.1
 
 * New feature: Bot loop prevention
