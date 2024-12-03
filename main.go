@@ -23,7 +23,7 @@ import (
     NomiKin "github.com/d3tourrr/NomiKinGo"
 )
 
-var version = "v0.7.1"
+var version = "v0.8.1"
 var companions = make(map[*discordgo.Session]*Companion)
 var roomPrimaries = make(map[string]string)
 
