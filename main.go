@@ -163,6 +163,44 @@ func (c *Companion) Setup(envFile string) {
 
     c.Tracker = NewBotMessageTracker()
 
+    // For Nomi room
+    if c.CompanionType == "NOMI" {
+        c.NomiKin.Init()
+
+        if c.ChatStyle == "ROOMS" {
+            roomsString := c.Rooms
+            if roomsString == "" {
+                log.Fatalf("Companion %v is in ROOMS mode but no rooms were provided.", c.CompanionId)
+            }
+
+            var rooms []Room
+            if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
+                log.Fatalf("Companion %v Error parsing NOMI_ROOMS: %v", c.CompanionId, err)
+            }
+
+            c.RoomObjects = map[string]Room{}
+            for _, room := range rooms {
+                log.Printf("Creating/adding Nomi %v to room: %v\n", c.CompanionId, room.Name)
+                // log.Printf("Creating/adding Nomi %v to room: %v\n  Note: %v\n  Backchanneling: %v\n  RandomResponseChance: %v\n", companion.CompanionId, room.Name, room.Note, room.Backchanneling, room.RandomResponseChance)
+                if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
+                    log.Printf("Error: RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
+                }
+
+                r, err := c.NomiKin.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{c.CompanionId})
+                if err != nil {
+                    log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", c.CompanionId, room.Name, err)
+                }
+
+                c.RoomObjects[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
+
+                if _, exists := roomPrimaries[r.Name]; !exists {
+                    // We are primary
+                    roomPrimaries[r.Name] = c.CompanionId
+                }
+            }
+        }
+    }
+
     log.Printf("Finished setup of companion %v from file %v\n", c.CompanionId, envFile)
     // printStructFields(c)
 }
@@ -192,44 +230,6 @@ func (c *Companion) RunDiscordBot() error {
     err = dg.Open()
     if err != nil {
         log.Fatalf("Error opening Discord connection: %v", err)
-    }
-
-    // For Nomi rooms
-    if c.CompanionType == "NOMI" {
-        c.NomiKin.Init()
-
-        if c.ChatStyle == "ROOMS" {
-            roomsString := c.Rooms
-            if roomsString == "" {
-                log.Fatalf("Companion %v is in ROOMS mode but no rooms were provided.", c.CompanionId)
-            }
-
-            var rooms []Room
-            if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
-                log.Fatalf("Companion %v Error parsing NOMI_ROOMS: %v", c.CompanionId, err)
-            }
-
-            c.RoomObjects = map[string]Room{}
-            for _, room := range rooms {
-                log.Printf("Creating/adding Nomi %v to room: %v\n", c.CompanionId, room.Name)
-                // log.Printf("Creating/adding Nomi %v to room: %v\n  Note: %v\n  Backchanneling: %v\n  RandomResponseChance: %v\n", companion.CompanionId, room.Name, room.Note, room.Backchanneling, room.RandomResponseChance)
-                if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
-                    return fmt.Errorf("RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
-                }
-
-                r, err := c.NomiKin.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{c.CompanionId})
-                if err != nil {
-                    log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", c.CompanionId, room.Name, err)
-                }
-
-                c.RoomObjects[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
-
-                if _, exists := roomPrimaries[r.Name]; !exists {
-                    // We are primary
-                    roomPrimaries[r.Name] = c.CompanionId
-                }
-            }
-        }
     }
 
     updateStatus(dg)
