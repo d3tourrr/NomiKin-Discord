@@ -25,6 +25,7 @@ import (
 
 var version = "v0.7.1"
 var companions = make(map[*discordgo.Session]*Companion)
+var roomPrimaries = make(map[string]string)
 
 type Companion struct {
     DiscordBotToken string
@@ -222,6 +223,11 @@ func (c *Companion) RunDiscordBot() error {
                 }
 
                 c.RoomObjects[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
+
+                if _, exists := roomPrimaries[r.Name]; !exists {
+                    // We are primary
+                    roomPrimaries[r.Name] = c.CompanionId
+                }
             }
         }
     }
@@ -244,6 +250,78 @@ func (c *Companion) RunDiscordBot() error {
     go queue.ProcessMessages()
 
     select {}
+}
+
+func (companion *Companion) AmIPrimary(m *discordgo.MessageCreate) bool {
+    sendPrimary := true
+    if roomPrimaries[m.ChannelID] != companion.CompanionId {
+        // We're not the primary
+        log.Printf("%v is not primary for %v - %v is\n", companion.CompanionId, m.ChannelID, roomPrimaries[m.ChannelID])
+        sendPrimary = false
+    } else {
+        log.Printf("%v is primary for %v\n", companion.CompanionId, m.ChannelID)
+    }
+    return sendPrimary
+}
+
+func (c *Companion) GetRoomMembers(roomId string) []string {
+    roomInfo, err := c.NomiKin.RoomExists(&roomId)
+    if err != nil {
+        log.Printf("Error checking if room exists: %v\n", err)
+        return []string{}
+    }
+
+    // Ensure roomInfo and roomInfo.Nomis are not nil
+    if roomInfo == nil || roomInfo.Nomis == nil {
+        log.Printf("Room info or room members are nil for room %s\n", roomId)
+        return []string{}
+    }
+
+    // Collect members if the above checks pass
+    var retMembers []string
+    for _, m := range roomInfo.Nomis {
+        if m.Uuid != "" {
+            retMembers = append(retMembers, m.Uuid)
+        }
+    }
+
+    return retMembers
+}
+
+func (c *Companion) CheckRoomStatus(roomId string) string {
+    endpoint := "https://api.nomi.ai/v1/rooms/" + roomId
+    repl, err := c.NomiKin.ApiCall(endpoint, "GET", nil)
+    if err != nil {
+        log.Printf("Error calling Nomi %v API: %v\n", c.CompanionId, err)
+    }
+
+    var resp map[string]interface{}
+    err = json.Unmarshal(repl, &resp)
+    if err != nil {
+        log.Printf("%v failed to decode JSON: %v\n", c.CompanionId, err)
+    }
+
+    status, ok := resp["status"].(string)
+    if !ok {
+        log.Printf("%v status field is missing\n", c.CompanionId)
+    }
+
+    return status
+}
+
+func (c *Companion) WaitForRoom(roomId string) bool {
+    waitFor := 45
+    waited := 0
+    for {
+        if waited > waitFor {
+            return false
+        }
+        if c.CheckRoomStatus(roomId) == "Default" {
+            return true
+        }
+        time.Sleep(time.Second * 1)
+        waited++
+    }
 }
 
 func getEnvFiles(dir string) ([]string, error) {
@@ -520,7 +598,7 @@ func sendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) er
         randomValue := rand.Float64() * 100
         if randomValue < float64(companion.RoomObjects[m.ChannelID].RandomResponseChance) {
             respondToThis = true
-            fmt.Printf("Nomi %v random response chance triggered. RandomResponseChance in channel %v set to %v.\n", companion.CompanionId, m.ChannelID, float64(companion.RoomObjects[m.ChannelID].RandomResponseChance))
+            log.Printf("Nomi %v random response chance triggered. RandomResponseChance in channel %v set to %v.\n", companion.CompanionId, m.ChannelID, float64(companion.RoomObjects[m.ChannelID].RandomResponseChance))
         }
     }
 
@@ -564,11 +642,25 @@ func sendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) er
         switch companion.CompanionType {
         case "NOMI":
             if companion.ChatStyle == "ROOMS" {
+                // Only forward the message to a room if this companion is the primary for the room - avoid duplication
+                sendPrimary := companion.AmIPrimary(m)
+
                 roomId := companion.RoomObjects[m.ChannelID].Uuid
-                _, err = companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
+                if sendPrimary {
+                    canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
+                    if canSend {
+                        _, err = companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
+                    } else {
+                        log.Printf("Waited as long as we could, but room %v was never ready for a message from %v\n", m.ChannelID, companion.CompanionId)
+                    }
+                }
                 if !loopBreak {
-                    time.Sleep(3 * time.Second) // Avoid Nomi not ready for message error
-                    companionReply, err = companion.NomiKin.RequestNomiRoomReply(&roomId, &companion.NomiKin.CompanionId)
+                    canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
+                    if canSend {
+                        companionReply, err = companion.NomiKin.RequestNomiRoomReply(&roomId, &companion.NomiKin.CompanionId)
+                    } else {
+                        log.Printf("Waited as long as we could, but room %v was never ready for a message from %v\n", m.ChannelID, companion.CompanionId)
+                    }
                 }
             } else {
                 companionReply, err = companion.NomiKin.SendNomiMessage(&updatedMessage)
@@ -606,10 +698,18 @@ func sendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) er
     // duplicated and messy code to clean up...
     if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
         updatedMessage := updateMessage(m, companion)
+        sendPrimary := companion.AmIPrimary(m)
         roomId := companion.RoomObjects[m.ChannelID].Uuid
-        _, err := companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
-        if err != nil {
-            log.Printf("Error sending message to room: %v\n", err)
+        if sendPrimary {
+            canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
+            if canSend {
+                _, err := companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
+                if err != nil {
+                    log.Printf("Error sending message to room: %v\n", err)
+                }
+            } else {
+                log.Printf("Waited as long as we could, but room %v was never ready for a message from %v\n", m.ChannelID, companion.CompanionId)
+            }
         }
     }
 
@@ -627,6 +727,24 @@ func (companion *Companion) handleMessageCreate(s *discordgo.Session, m *discord
         if companion.RoomObjects[m.ChannelID].Uuid == "" {
             return
         }
+        
+        // If the message is from a Nomi in the same room, we don't have to process it, because they already did
+        if m.Author.Bot {
+            sharedNomiRoom := false
+            roomMems := companion.GetRoomMembers(m.ChannelID)
+            for b, c := range companions {
+                if b.State.User.ID == m.Author.ID && contains(roomMems, c.CompanionId) {
+                    sharedNomiRoom = true
+                    log.Printf("%v message from Companion %v is in the same room %v - not forwarding to the room\n", companion.CompanionId, c.CompanionId, m.ChannelID)
+                    break
+                }
+            }
+
+            if sharedNomiRoom {
+                return
+            }
+        }
+
     }
 
     message := QueuedMessage{
