@@ -25,7 +25,7 @@ func PrintStructFields(c *Companion) {
         fieldName := typ.Field(i).Name
         fieldValue := field.Interface()
 
-        if fieldName == "DiscordBotToken" || fieldName == "CompanionToken" {
+        if fieldName == "DiscordBotToken" || fieldName == "CompanionToken" || fieldName == "NomiKin" {
             // Keep secrets a secret
             fieldValue = "***redacted***"
         }

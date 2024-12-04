@@ -1,18 +1,25 @@
 package main
 
 import (
+    "fmt"
     "log"
     "os"
     "sync"
 )
 
 func main() {
+    fmt.Println(Banner)
+    fmt.Println("Help, info, contact: github.com/d3tourrr/NomiKin-Discord\n")
+
     if os.Getenv("NOMIKINLOGGING") == "verbose" {
         Verbose = true
-        log.Printf(">>> Verbose logging enabled by 'NOMIKINLOGGING' environment variable set to 'verbose'\n")
+        fmt.Println(">>> Verbose logging enabled by 'NOMIKINLOGGING' environment variable set to 'verbose'\n")
     } else {
-        log.Printf(">>> Optional: Enable verbose logging for troubleshooting by setting 'NOMIKINLOGGING' environment variable to 'verbose'.\n")
+        fmt.Println(">>> Optional: Enable verbose logging by setting 'NOMIKINLOGGING' environment variable to 'verbose'.\n")
     }
+
+    fmt.Println(`_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~"(`)
+    fmt.Println()
 
     envFiles, err := GetEnvFiles("./bots")
     if err != nil {

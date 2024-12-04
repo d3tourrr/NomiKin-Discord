@@ -4,9 +4,12 @@
 
 > [!WARNING]
 > Breaking Changes!
+> 
+> * `.env` files have a new naming format, and need to be saved somewhere new.
+> * The new naming format is `CompanionName.env`.
+> * `.env` files must go in the `./bots/` directory. You can make subdirectories inside of `./bots/` if you want to keep your crew organized, but *every* `.env` file in the `./bots/` directory will get loaded.
 
-* **MAJOR CHANGE**
-  * You can now run all your companions from one instance of this integration - in one Docker container.
+* **MAJOR CHANGE** - Run all your companions from one instance of this integration, in one Docker container
   * Put your `.env` files in the `./bots/` folder and they will all be automatically setup.
   * `.env` files now have a different naming format. They are now `CompanionName.env` instead of `.env.CompanionName`
   * No more support for a default `.env` file. All `.env` files need to have a name, even if you're only running one companion.
@@ -15,6 +18,29 @@
   * They will now make sure that messages from Discord users are only forwarded to the Room once.
   * They will not forward messages from other Nomis in the same Room to the Room.
   * These two changes mean that when you're running multiple Nomis in the same Room, there's no duplication of messages sent to the Room.
+* Verbose logging mode
+  * Default logging is "turned down" a little to make for cleaner logs. If you want more verbose logging (maybe you're troubleshooting an issue), set the `NOMIKINLOGGING` environment variable to `verbose` when starting your Docker container
+  * Ex: `docker run --name nomikin-discord -e NOMIKINLOGGING=verbose nomikin-discord`
+* Cool new ASCII art when starting up
+
+```
+   _  __           _ __ ___
+  / |/ /__  __ _  (_) //_(_)__
+ /    / _ \/  ' \/ / ,< / / _ \
+/_/|_/\___/_/_/_/_/_/|_/_/_//_/     __
+    ____/ _ \(_)__ _______  _______/ /
+   /___/ // / (_-</ __/ _ \/ __/ _  /
+   __ /____/_/___/\__/\___/_/  \_,_/
+  / /  __ __  ___/ /_  // /____  __ ______
+ / _ \/ // / / _  //_ </ __/ _ \/ // / __/
+/_.__/\_, /  \_,_/____/\__/\___/\_,_/_/
+     /___/
+
+Help, info, contact: github.com/d3tourrr/NomiKin-Discord
+
+
+_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~"(
+```
 
 ## 0.7.1
 

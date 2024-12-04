@@ -126,7 +126,7 @@ Your Nomi does not decide when to respond. The chance of a response despite not 
 
 # Running multiple companions at once
 
-You can run as many companions as you'd like in one instance of this integration. Each companion needs its own `.env` file in the `./bots/` folder.
+You can run as many companions as you'd like in one instance of this integration. Each companion needs its own `.env` file in the `./bots/` folder. You can make subdirectories inside of `./bots/` if you want to keep your crew organized, but *every* `.env` file in the `./bots/` directory will get loaded.
 
 ## Example
 
