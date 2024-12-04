@@ -216,3 +216,45 @@ You may also wish to change your Kindroid's Response Directive to better suit th
 
 It's also a good idea to add a journal entry that triggers on the word "Discord" or your Discord username to help your Kindroid understand that messages from your Discord username are from you, and others are from other people.
 
+# Troubleshooting
+
+You can see the logs for your running integration by typing `docker logs --tail 50 <name>` where `50` is the number of log entries you want to see (you may need to increase this number), and `<name>` is the name of your running Docker container, operating the instance of this integration.
+
+This troubleshooting section is not a replacement for actually knowing what you're doing. It's just a handful of commands that can help you get support. More on basic Docker operations: [Getting Started With Docker](https://docs.docker.com/get-started/).
+
+## What is the name of my running container?
+
+If your container is running, type `docker ps` to see a list of the running containers. The name is shown, and you can use that on your `docker logs` commands.
+
+## What if my container isn't running?
+
+If your container isn't showing up in `docker ps` output, then type `docker container ls`. You'll see all your containers, their names, and the states (running, stopped, etc.).
+
+Maybe you need to run `docker container start <name>` because your container exists but isn't running.
+
+## I don't see my container at all!
+
+Then follow the setup steps earlier in this readme to build the image and create the container.
+
+## Enable Verbose Logging
+
+By default, the logs generated are relatively sparse. You can enable verbose logging by setting the `NOMIKINLOGGING` environment variable to `verbose`. How do you do that? I'm glad you asked.
+
+When you `docker run` the container, you will pass the environment variable at that time. Your command then looks like this.
+
+`docker run -d --name <name> -e NOMIKINLOGGING=verbose <name>`
+
+This can be pretty noisy, so I don't recommend turning it on by default. My recommendation is to run in normal logging mode (simply do not pass the `NOMIKINLOGGING` environment variable, startup normally), and enable verbose logging if you're running into an issue you want to troubleshoot, or you're working with someone else to try and get some bug squashed.
+
+## Known Issues
+
+> [!WARNING]
+> Sometimes when you are running Nomis in Rooms mode, the first time you run the integration, the rooms need to be created. Sometimes, the Nomi API returns an error that your `Note` for the room wasn't accepted, even though there's nothing wrong with it and it still created the room. Receiving this error causes this Discord integration to fail, because as far as we know, Nomi didn't create your room and you're going to have issues.
+> 
+> If you started your Docker container but your bots are still not online, check `docker logs --tail 20 <name>` and see if there was a `NoteNotAccepted` error towards the end.
+>
+> Work around this issue by starting the integration again.
+
+> [!NOTE]
+> In rare cases, Nomis running in Rooms mode will have an error where they both appear to send an identical response one after another, even if they aren't supposed to be the one responding. I haven't been able to reproduce this on my own, so if you can, please open an Issue on this repo with as many details as you're comfortable sharing.
+
