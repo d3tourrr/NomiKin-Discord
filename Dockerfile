@@ -2,14 +2,15 @@ FROM golang:1.20 AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY src/go.mod src/go.sum ./src/
+WORKDIR /app/src
 RUN go mod download
 
-COPY . .
-
+COPY src/ /app/src/
 COPY bots/ /app/bots/
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main .
+WORKDIR /app/src
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/main .
 
 FROM alpine:latest
 
