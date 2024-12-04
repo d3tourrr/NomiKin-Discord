@@ -57,7 +57,7 @@ func UpdateMessage(m *discordgo.MessageCreate, companion *Companion) string {
     return updatedMessage
 }
 
-func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) error {
+func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, botRespondNoForward bool) error {
     respondToThis, verboseReason := companion.ResponseNeeded(m)
 
     if respondToThis {
@@ -102,15 +102,9 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) er
         switch companion.CompanionType {
         case "NOMI":
             if companion.ChatStyle == "ROOMS" {
-                // The `status` field on a Room doesn't update quickly enough when more than one Nomi is responding
-                // So I'm doing this contrived nonsense to randomize a delay per Nomi, so they hopefully don't overlap
-                rand.Seed(time.Now().UnixNano())
-                maxWait := len(companion.GetRoomMembers(m.ChannelID))
-                randWait := rand.Intn(maxWait) + rand.Intn(4)
-                VerboseLog("%v - Sleeping %v seconds to avoid Nomi Room collision", companion.CompanionId, randWait)
-                time.Sleep(time.Second * time.Duration(randWait))
-
-                NomiRoomSend(companion, m)
+                if !botRespondNoForward {
+                    NomiRoomSend(companion, m)
+                }
 
                 if !loopBreak {
                     canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
@@ -163,6 +157,14 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) er
 }
 
 func NomiRoomSend(companion *Companion, m *discordgo.MessageCreate) {
+    // The `status` field on a Room doesn't update quickly enough when more than one Nomi is responding
+    // So I'm doing this contrived nonsense to randomize a delay per Nomi, so they hopefully don't overlap
+    rand.Seed(time.Now().UnixNano())
+    maxWait := len(companion.GetRoomMembers(m.ChannelID))
+    randWait := rand.Intn(maxWait) + rand.Intn(4)
+    VerboseLog("%v - Sleeping %v seconds to avoid Nomi Room collision", companion.CompanionId, randWait)
+    time.Sleep(time.Second * time.Duration(randWait))
+
     updatedMessage := UpdateMessage(m, companion)
     sendPrimary := companion.AmIPrimary(m)
     roomId := companion.RoomObjects[m.ChannelID].Uuid
@@ -180,6 +182,9 @@ func NomiRoomSend(companion *Companion, m *discordgo.MessageCreate) {
 }
 
 func (companion *Companion) HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+    // For when we need to respond to another bot without forwarding the message to the room
+    botRespondNoForward := false
+
     if m.Author.ID == companion.DiscordSession.State.User.ID {
         // We don't have to send our companion their own messages
         return
@@ -193,18 +198,13 @@ func (companion *Companion) HandleMessageCreate(s *discordgo.Session, m *discord
         
         // If the message is from a Nomi in the same room, we don't have to process it, because they already did
         if m.Author.Bot {
-            sharedNomiRoom := false
             roomMems := companion.GetRoomMembers(m.ChannelID)
             for b, c := range Companions {
                 if b.State.User.ID == m.Author.ID && Contains(roomMems, c.CompanionId) {
-                    sharedNomiRoom = true
+                    botRespondNoForward = true
                     VerboseLog("%v message from Companion %v is in the same room %v - not forwarding to the room", companion.CompanionId, c.CompanionId, m.ChannelID)
                     break
                 }
-            }
-
-            if sharedNomiRoom {
-                return
             }
         }
     }
@@ -212,6 +212,7 @@ func (companion *Companion) HandleMessageCreate(s *discordgo.Session, m *discord
     message := QueuedMessage{
         Message: m,
         Companion: companion,
+        BotRespondNoForward: botRespondNoForward,
     }
 
     companion.Queue.Enqueue(message)

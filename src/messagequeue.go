@@ -11,6 +11,7 @@ import (
 type QueuedMessage struct {
     Message   *discordgo.MessageCreate
     Companion *Companion
+    BotRespondNoForward bool
 }
 
 type MessageQueue struct {
@@ -45,7 +46,7 @@ func (q *MessageQueue) ProcessMessages() {
             continue
         }
 
-        err := SendMessageToCompanion(queuedMessage.Message, queuedMessage.Companion)
+        err := SendMessageToCompanion(queuedMessage.Message, queuedMessage.Companion, queuedMessage.BotRespondNoForward)
         if err != nil {
             log.Printf("Failed to send message to Companion API: %v", err)
             q.Enqueue(queuedMessage) // Requeue the message if failed
