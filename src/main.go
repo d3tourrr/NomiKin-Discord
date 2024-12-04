@@ -3,14 +3,13 @@ package main
 import (
     "log"
     "os"
-    "strings"
     "sync"
 )
 
 func main() {
-    if strings.ToLower(os.Getenv("NOMIKINLOGGING")) == "verbose" {
+    if os.Getenv("NOMIKINLOGGING") == "verbose" {
         Verbose = true
-        log.Printf("Verbose logging enabled by 'NOMIKINLOGGING' environment variable set to 'verbose'\n")
+        log.Printf(">>> Verbose logging enabled by 'NOMIKINLOGGING' environment variable set to 'verbose'\n")
     } else {
         log.Printf(">>> Optional: Enable verbose logging for troubleshooting by setting 'NOMIKINLOGGING' environment variable to 'verbose'.\n")
     }

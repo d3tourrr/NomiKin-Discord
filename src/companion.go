@@ -82,28 +82,28 @@ func (c *Companion) Setup(envFile string) {
                 c.CompanionType = value
             }
         case "MESSAGE_PREFIX":
-            c.MessagePrefix = value
+            c.MessagePrefix = strings.Trim(value, "\"")
         case "REPLY_PREFIX":
-            c.ReplyPrefix = value
+            c.ReplyPrefix = strings.Trim(value, "\"")
         case "RESPOND_TO_PING":
-            c.RespondPing, err = strconv.ParseBool(value)
+            c.RespondPing, err = strconv.ParseBool(strings.Trim(value, "\""))
             if err != nil {
                 log.Fatalf("RESPOND_TO_PING must be set to either TRUE or FALSE. Set RESPOND_TO_PING correctly in %v", envFile)
             }
         case "RESPOND_TO_ROLE_PING":
-            c.RespondRole, err = strconv.ParseBool(value)
+            c.RespondRole, err = strconv.ParseBool(strings.Trim(value, "\""))
             if err != nil {
                 log.Fatalf("RESPOND_TO_ROLE_PING must be set to either TRUE or FALSE. Set RESPOND_TO_ROLE_PING correctly in %v", envFile)
             }
         case "RESPOND_TO_DIRECT_MESSAGE":
-            c.RespondRole, err = strconv.ParseBool(value)
+            c.RespondRole, err = strconv.ParseBool(strings.Trim(value, "\""))
             if err != nil {
                 log.Fatalf("RESPOND_TO_DIRECT_MESSAGE must be set to either TRUE or FALSE. Set RESPOND_TO_DIRECT_MESSAGE correctly in %v", envFile)
             }
         case "RESPONSE_KEYWORDS":
             c.Keywords = value
         case "BOT_MESSAGE_REPLY_MAX":
-            c.BotReplyMax, err = strconv.Atoi(value)
+            c.BotReplyMax, err = strconv.Atoi(strings.Trim(value, "\""))
             if err != nil {
                 log.Fatalf("Bot Message Reply Max was not set to a number. Fix BOT_MESSAGE_REPLY_MAX in %v", envFile)
             }

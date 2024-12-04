@@ -7,6 +7,7 @@ import (
     "math/rand"
     "os"
     "os/signal"
+    "path/filepath"
     "net/http"
     "reflect"
     "regexp"
@@ -56,19 +57,24 @@ func VerboseLog(s string, args ...interface{}) {
 }
 
 func GetEnvFiles(dir string) ([]string, error) {
-    files, err := ioutil.ReadDir(dir)
-    if err != nil {
-        return nil, err
-    }
+	var envFiles []string
 
-    var envFiles []string
-    for _, file := range files {
-        if strings.HasSuffix(file.Name(), ".env") {
-            envFiles = append(envFiles, dir + "/" + file.Name())
-        }
-    }
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 
-    return envFiles, nil
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ".env") {
+			envFiles = append(envFiles, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return envFiles, nil
 }
 
 func UpdateMessage(m *discordgo.MessageCreate, companion *Companion) string {
