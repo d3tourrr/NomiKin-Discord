@@ -51,6 +51,7 @@ func (tracker *BotMessageTracker) TrackMessage(botID string, companion *Companio
     defer tracker.lock.Unlock()
 
     tracker.counts[botID] = append(tracker.counts[botID], time.Now())
+    VerboseLog("%v message from %v count: %v/%v", companion.CompanionId, botID, len(tracker.counts[botID]), companion.BotReplyMax)
 
     if tracker.GetMessageCount(botID) > companion.BotReplyMax {
         log.Printf("Received more than %v (BOT_MESSAGE_REPLY_MAX) messages from bot %v within the last hour. Not responding.", companion.BotReplyMax, botID)
