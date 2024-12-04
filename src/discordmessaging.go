@@ -3,6 +3,7 @@ package main
 import (
     "log"
     "regexp"
+    "math/rand"
     "strings"
     "time"
 
@@ -60,7 +61,7 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) er
     respondToThis, verboseReason := companion.ResponseNeeded(m)
 
     if respondToThis {
-        VerboseLog("Response required: %v", verboseReason)
+        VerboseLog("%v - Response required: %v", companion.CompanionId, verboseReason)
         loopBreak := false
         if m.Author.Bot {
             reply := companion.Tracker.TrackMessage(m.Author.ID, companion)
@@ -101,7 +102,16 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion) er
         switch companion.CompanionType {
         case "NOMI":
             if companion.ChatStyle == "ROOMS" {
+                // The `status` field on a Room doesn't update quickly enough when more than one Nomi is responding
+                // So I'm doing this contrived nonsense to randomize a delay per Nomi, so they hopefully don't overlap
+                rand.Seed(time.Now().UnixNano())
+                maxWait := len(companion.GetRoomMembers(m.ChannelID))
+                randWait := rand.Intn(maxWait) + rand.Intn(4)
+                VerboseLog("%v - Sleeping %v seconds to avoid Nomi Room collision", companion.CompanionId, randWait)
+                time.Sleep(time.Second * time.Duration(randWait))
+
                 NomiRoomSend(companion, m)
+
                 if !loopBreak {
                     canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
                     if canSend {

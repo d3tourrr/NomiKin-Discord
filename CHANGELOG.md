@@ -18,6 +18,7 @@
   * They will now make sure that messages from Discord users are only forwarded to the Room once.
   * They will not forward messages from other Nomis in the same Room to the Room.
   * These two changes mean that when you're running multiple Nomis in the same Room, there's no duplication of messages sent to the Room.
+  * A small random delay is given to each Nomi before they send a message to a Room - this is to prevent two or more Nomis from talking over each other (manifested as a `RoomNotReady` error). This isn't perfect. Each Nomi will pause for a random amount of time based on how many other Nomis are in the Room with them.
 * Verbose logging mode
   * Default logging is "turned down" a little to make for cleaner logs. If you want more verbose logging (maybe you're troubleshooting an issue), set the `NOMIKINLOGGING` environment variable to `verbose` when starting your Docker container
   * Ex: `docker run --name nomikin-discord -e NOMIKINLOGGING=verbose nomikin-discord`
