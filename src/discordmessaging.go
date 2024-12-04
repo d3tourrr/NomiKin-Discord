@@ -112,6 +112,7 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
                     }
                 } else {
                     VerboseLog("%v Loop Prevention active [type: %v | mode: %v], halting reply chain.", companion.CompanionId, companion.CompanionType, companion.ChatStyle)
+                    return nil
                 }
             } else {
                 companionReply, err = companion.NomiKin.SendNomiMessage(&updatedMessage)
@@ -153,7 +154,6 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
 }
 
 func NomiRoomSend(companion *Companion, m *discordgo.MessageCreate) {
-
     updatedMessage := UpdateMessage(m, companion)
     sendPrimary := companion.AmIPrimary(m)
     roomId := companion.RoomObjects[m.ChannelID].Uuid
