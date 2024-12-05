@@ -59,7 +59,7 @@ func (c *Companion) Setup(envFile string) {
         }
 
         key := strings.TrimSpace(parts[0])
-        value := strings.TrimSpace(parts[1])
+        value := strings.Trim(strings.TrimSpace(parts[1]), "\"")
         envVars[key] = value
     }
 
@@ -77,38 +77,38 @@ func (c *Companion) Setup(envFile string) {
             c.CompanionId = value
         case "COMPANION_TYPE":
             if value != "NOMI" && value != "KINDROID" {
-                log.Fatalf("Companion Type must be set to either `NOMI` or `KINDROID`. Set COMPANION_TYPE correctly in %v", envFile)
+                log.Fatalf("Companion Type must be set to either `NOMI` or `KINDROID`. Your value: '%v'. Set COMPANION_TYPE correctly in %v", value, envFile)
             } else {
                 c.CompanionType = value
             }
         case "MESSAGE_PREFIX":
-            c.MessagePrefix = strings.Trim(value, "\"")
+            c.MessagePrefix = value
         case "REPLY_PREFIX":
-            c.ReplyPrefix = strings.Trim(value, "\"")
+            c.ReplyPrefix = value
         case "RESPOND_TO_PING":
-            c.RespondPing, err = strconv.ParseBool(strings.Trim(value, "\""))
+            c.RespondPing, err = strconv.ParseBool(value)
             if err != nil {
                 log.Fatalf("RESPOND_TO_PING must be set to either TRUE or FALSE. Set RESPOND_TO_PING correctly in %v", envFile)
             }
         case "RESPOND_TO_ROLE_PING":
-            c.RespondRole, err = strconv.ParseBool(strings.Trim(value, "\""))
+            c.RespondRole, err = strconv.ParseBool(value)
             if err != nil {
                 log.Fatalf("RESPOND_TO_ROLE_PING must be set to either TRUE or FALSE. Set RESPOND_TO_ROLE_PING correctly in %v", envFile)
             }
         case "RESPOND_TO_DIRECT_MESSAGE":
-            c.RespondRole, err = strconv.ParseBool(strings.Trim(value, "\""))
+            c.RespondRole, err = strconv.ParseBool(value)
             if err != nil {
                 log.Fatalf("RESPOND_TO_DIRECT_MESSAGE must be set to either TRUE or FALSE. Set RESPOND_TO_DIRECT_MESSAGE correctly in %v", envFile)
             }
         case "RESPONSE_KEYWORDS":
             c.Keywords = value
         case "BOT_MESSAGE_REPLY_MAX":
-            c.BotReplyMax, err = strconv.Atoi(strings.Trim(value, "\""))
+            c.BotReplyMax, err = strconv.Atoi(value)
             if err != nil {
                 log.Fatalf("Bot Message Reply Max was not set to a number. Fix BOT_MESSAGE_REPLY_MAX in %v", envFile)
             }
         case "CHAT_STYLE":
-            if strings.Trim(value, "\"") == "ROOMS" {
+            if value == "ROOMS" {
                 c.ChatStyle = "ROOMS"
             } else {
                 c.ChatStyle = "NORMAL"
