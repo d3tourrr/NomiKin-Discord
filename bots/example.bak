@@ -53,6 +53,9 @@ RESPONSE_KEYWORDS=""
 # Set to -1 to never stop replying. Set to 0 to never reply to another companion.
 BOT_MESSAGE_REPLY_MAX=10
 
+# Should the /showconfig command be enabled for this companion or not? TRUE or FALSE
+SHOWCONFIG_ENABLED=TRUE
+
 ########### NOMI ROOMS ###########
 # Nomi supports a group chat style concept called "Rooms". When using the Rooms mode, your Nomi will not only
 # respond when pinged or when one of their keywords is triggered, but they'll be aware of all messages sent

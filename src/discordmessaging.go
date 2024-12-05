@@ -187,6 +187,12 @@ func (companion *Companion) HandleMessageCreate(s *discordgo.Session, m *discord
         return
     }
 
+    // Ignore messages with embeds
+    if len(m.Embeds) > 0 {
+        VerboseLog("%v - dropping message from %v because it has embeds", companion.CompanionId, m.Author.ID)
+        return
+    }
+
     if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
         // If we're in Rooms mode, drop messages for which we don't have a room setup for
         if companion.RoomObjects[m.ChannelID].Uuid == "" {

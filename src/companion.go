@@ -32,6 +32,7 @@ type Companion struct {
     Queue           MessageQueue
     DiscordSession  *discordgo.Session
     RoomObjects     map[string]Room
+    ShowConfigEnabled bool
 }
 
 func (c *Companion) Setup(envFile string) {
@@ -107,6 +108,11 @@ func (c *Companion) Setup(envFile string) {
             if err != nil {
                 log.Fatalf("Bot Message Reply Max was not set to a number. Fix BOT_MESSAGE_REPLY_MAX in %v", envFile)
             }
+        case "SHOWCONFIG_ENABLED":
+            c.ShowConfigEnabled, err = strconv.ParseBool(value)
+            if err != nil {
+                log.Fatalf("SHOWCONFIG_ENABLED must be set to either TRUE or FALSE. Set SHOWCONFIG_ENABLED correctly in %v", envFile)
+            }
         case "CHAT_STYLE":
             if value == "ROOMS" {
                 c.ChatStyle = "ROOMS"
@@ -131,6 +137,11 @@ func (c *Companion) Setup(envFile string) {
     if _, exists := envVars["CHAT_STYLE"]; !exists {
         VerboseLog("CHAT_STYLE not present in config. Setting default value 'NORMAL'.")
         c.ChatStyle = "NORMAL"
+    }
+
+    if _, exists := envVars["SHOWCONFIG_ENABLED"]; !exists {
+        VerboseLog("SHOWCONFIG_ENABLED not present in config. Setting default value 'TRUE'.")
+        c.ShowConfigEnabled = true
     }
 
     c.NomiKin = NomiKin.NomiKin{
@@ -197,6 +208,7 @@ func (c *Companion) RunDiscordBot() error {
     dg.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
 
     dg.AddHandler(c.HandleMessageCreate)
+    dg.AddHandler(c.HandleSlashCommands)
 
     dg.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
         go func() {
@@ -211,6 +223,8 @@ func (c *Companion) RunDiscordBot() error {
     if err != nil {
         log.Fatalf("Error opening Discord connection: %v", err)
     }
+
+    c.RegisterSlashCommands(dg)
 
     UpdateStatus(dg)
     statusTicker := time.NewTicker(10 * time.Minute)

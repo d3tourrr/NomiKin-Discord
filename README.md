@@ -246,6 +246,15 @@ When you `docker run` the container, you will pass the environment variable at t
 
 This can be pretty noisy, so I don't recommend turning it on by default. My recommendation is to run in normal logging mode (simply do not pass the `NOMIKINLOGGING` environment variable, startup normally), and enable verbose logging if you're running into an issue you want to troubleshoot, or you're working with someone else to try and get some bug squashed.
 
+## `/showconfig` Command
+
+Each companion in a server has its own `/showconfig` command that can be used to display how that companion is configured and some information about the companion in your server (nickname, roles, etc.). The majority of the information returned by the command is configured in your `.env` file, so the contents shouldn't be very surprising. However, it can be helpful to quickly see if perhaps a value you provided in the `.env` file isn't being parsed correctly, or if you don't have easy access to your `.env` file.
+
+> [!CAUTION]
+> Anybody can run the `/showconfig` command for your companion by default. Permissions to run slash commands are handled at the [Discord level](https://discord.com/blog/slash-commands-permissions-discord-apps-bots), not within the bot.
+> 
+> If you don't want people to run the `/showconfig` command for your companion, it can be enabled or disabled using the `SHOWCONFIG_ENABLED` setting in your `.env` file. The default value is `TRUE`.
+
 ## Known Issues
 
 > [!WARNING]

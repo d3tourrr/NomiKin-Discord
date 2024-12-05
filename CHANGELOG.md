@@ -22,6 +22,9 @@
 * Verbose logging mode
   * Default logging is "turned down" a little to make for cleaner logs. If you want more verbose logging (maybe you're troubleshooting an issue), set the `NOMIKINLOGGING` environment variable to `verbose` when starting your Docker container
   * Ex: `docker run --name nomikin-discord -e NOMIKINLOGGING=verbose nomikin-discord`
+* `/showconfig` command
+  * Each companion now has a `/showconfig` command that will display the configuration of that bot in your server.
+  * Disable the `/showconfig` command in your `.env` file using the `SHOWCONFIG_ENABLED` setting.
 * Cool new ASCII art when starting up
 
 ```
