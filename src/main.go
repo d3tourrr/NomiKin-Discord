@@ -10,16 +10,16 @@ import (
 func main() {
     fmt.Println(Banner)
     fmt.Println("Version: " + Version)
-    fmt.Println("Help, info, contact: github.com/d3tourrr/NomiKin-Discord\n")
+    fmt.Println("Help, info, contact: github.com/d3tourrr/NomiKin-Discord")
 
     if os.Getenv("NOMIKINLOGGING") == "verbose" {
         Verbose = true
-        fmt.Println(">>> Verbose logging enabled by 'NOMIKINLOGGING' environment variable set to 'verbose'\n")
+        fmt.Println("\n>>> Verbose logging enabled by 'NOMIKINLOGGING' environment variable set to 'verbose'")
     } else {
-        fmt.Println(">>> Optional: Enable verbose logging by setting 'NOMIKINLOGGING' environment variable to 'verbose'.\n")
+        fmt.Println("\n>>> Optional: Enable verbose logging by setting 'NOMIKINLOGGING' environment variable to 'verbose'.")
     }
 
-    fmt.Println(`_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~"(`)
+    fmt.Println("\n\n" + `_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~_.~"(_.~"(_.~"(_.~"(_.~"(`)
     fmt.Println()
 
     envFiles, err := GetEnvFiles("./bots")
@@ -49,6 +49,9 @@ func main() {
 
         }(companion)
     }
+
+    fmt.Println("\n\nSetup Complete")
+    fmt.Println()
 
     wg.Wait()
 }

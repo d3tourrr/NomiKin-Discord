@@ -10,29 +10,35 @@ import (
     "time"
 
     "github.com/bwmarrin/discordgo"
+    "github.com/d3tourrr/NomiKinGo"
 )
 
 func (companion *Companion) AmIPrimary(m *discordgo.MessageCreate) bool {
     sendPrimary := true
     if RoomPrimaries[m.ChannelID] != companion.CompanionId {
         // We're not the primary
-        VerboseLog("%v is not primary for %v - %v is", companion.CompanionId, m.ChannelID, RoomPrimaries[m.ChannelID])
+        companion.VerboseLog("Not primary for %v - %v is", m.ChannelID, RoomPrimaries[m.ChannelID])
         sendPrimary = false
     } else {
-        VerboseLog("%v is primary for %v", companion.CompanionId, m.ChannelID)
+        companion.VerboseLog("Is primary for %v", m.ChannelID)
     }
     return sendPrimary
 }
 
 func (c *Companion) GetRoomMembers(roomId string) []string {
-    roomInfo, err := c.NomiKin.RoomExists(&roomId)
-    if err != nil {
-        log.Printf("Error checking if room exists: %v\n", err)
+    var roomInfo *NomiKin.Room
+    callOut := SuppressGetRoomLogs(c.NomiKin.RoomExists, &roomId)
+
+    if callOut[0] != nil {
+        roomInfo = callOut[0].(*NomiKin.Room)
+    }
+    if callOut[1] != nil {
+        c.Log("Error checking if room exists: %v", callOut[1].(error))
         return []string{}
     }
 
     if roomInfo == nil || roomInfo.Nomis == nil {
-        log.Printf("Room info or room members are nil for room %s\n", roomId)
+        c.Log("Room info or room members are nil for room %v", roomId)
         return []string{}
     }
 
@@ -43,7 +49,7 @@ func (c *Companion) GetRoomMembers(roomId string) []string {
         }
     }
 
-    VerboseLog("Room members for %v are: %v", roomId, retMembers)
+    c.VerboseLog("Room members for %v are: %v", roomId, retMembers)
     return retMembers
 }
 
@@ -51,18 +57,18 @@ func (c *Companion) CheckRoomStatus(roomId string) string {
     endpoint := "https://api.nomi.ai/v1/rooms/" + roomId
     repl, err := c.NomiKin.ApiCall(endpoint, "GET", nil)
     if err != nil {
-        log.Printf("Error calling Nomi %v API: %v\n", c.CompanionId, err)
+        c.Log("Error calling Nomi %v API: %v", err)
     }
 
     var resp map[string]interface{}
     err = json.Unmarshal(repl, &resp)
     if err != nil {
-        log.Printf("%v failed to decode JSON: %v\n", c.CompanionId, err)
+        c.Log("Failed to decode JSON: %v", err)
     }
 
     status, ok := resp["status"].(string)
     if !ok {
-        log.Printf("%v status field is missing\n", c.CompanionId)
+        c.Log("Status field is missing for Room: %v", roomId)
     }
 
     return status
@@ -73,7 +79,7 @@ func (c *Companion) WaitForRoom(roomId string) bool {
     waited := 0
     for {
         if waited > waitFor {
-            VerboseLog("companion.WaitForRoom took longer than 45 seconds - Nomi: %v - Room: %v", c.CompanionId, roomId)
+            c.VerboseLog("companion.WaitForRoom took longer than 45 seconds - Room: %v", roomId)
             return false
         }
         if c.CheckRoomStatus(roomId) == "Default" {
@@ -107,7 +113,7 @@ func (companion *Companion) ResponseNeeded(m *discordgo.MessageCreate) (bool, st
 
         botMember, err := companion.DiscordSession.GuildMember(m.GuildID, botID)
         if err != nil {
-            log.Printf("Error retrieving bot member: %v\n", err)
+            companion.Log("Error retrieving bot member: %v", err)
             return false, verboseReason
         }
 
@@ -162,10 +168,52 @@ func (companion *Companion) ResponseNeeded(m *discordgo.MessageCreate) (bool, st
         if randomValue < float64(companion.RoomObjects[m.ChannelID].RandomResponseChance) {
             respondToThis = true
             verboseReason = "RandomResponseChance"
-            VerboseLog("Nomi %v random response chance triggered. RandomResponseChance in channel %v set to %v.", companion.CompanionId, m.ChannelID, float64(companion.RoomObjects[m.ChannelID].RandomResponseChance))
+            companion.VerboseLog("Random response chance triggered. RandomResponseChance in channel %v set to %v.", m.ChannelID, float64(companion.RoomObjects[m.ChannelID].RandomResponseChance))
         }
     }
 
     return respondToThis, verboseReason
+}
+
+func (c *Companion) VerboseLog(s string, args ...interface{}) {
+    if Verbose {
+        if c == nil {
+            log.Printf("Attempted to call VerboseLog on a nil Companion instance. String: %v\n", s)
+            return
+        }
+
+        if len(args) > 0 {
+            c.Log(s, args...)
+        } else {
+            c.Log(s)
+        }
+    }
+}
+
+func (c *Companion) Log(s string, args ...interface{}) {
+    if c == nil {
+        log.Printf("Attempted to call Log on a nil Companion instance. String: %v\n", s)
+        return
+    }
+
+    parts := strings.Split(s, "%v")
+    if len(parts)-1 != len(args) {
+        log.Printf("[%v] Logging Error: Number of format specifiers does not match number of arguments. String: %v\n", c.CompanionId, s)
+    }
+
+    var sb strings.Builder
+    for i, part := range parts {
+        sb.WriteString(part)
+        if i < len(args) {
+            sb.WriteString(fmt.Sprintf("%v", args[i]))
+        }
+    }
+
+    cBit := "[" + c.CompanionId + "]"
+    cPad := LogWidth - len(cBit) + 3
+    if cPad < 0 {
+        cPad = 0
+    }
+    log.Printf("%v%v %v", strings.Repeat(" ", cPad), cBit, sb.String())
 }
 

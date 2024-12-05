@@ -42,7 +42,10 @@ func (c *Companion) Setup(envFile string) {
         return
     }
 
-    VerboseLog("companion.Setup: %v", envFile)
+    if Verbose {
+        // Can't use VerboseLog because the companion isn't setup yet
+        log.Printf("companion.Setup: %v\n", envFile)
+    }
 
     scanner := bufio.NewScanner(f)
     envVars := make(map[string]string)
@@ -125,22 +128,22 @@ func (c *Companion) Setup(envFile string) {
     }
 
     if _, exists := envVars["RESPOND_TO_PING"]; !exists {
-        VerboseLog("RESPOND_TO_PING not present in config. Setting default value 'TRUE'.")
+        c.VerboseLog("RESPOND_TO_PING not present in config. Setting default value 'TRUE'.")
         c.RespondPing = true
     }
 
     if _, exists := envVars["BOT_MESSAGE_REPLY_MAX"]; !exists {
-        VerboseLog("BOT_MESSAGE_REPLY_MAX not present in config. Setting default value '10'.")
+        c.VerboseLog("BOT_MESSAGE_REPLY_MAX not present in config. Setting default value '10'.")
         c.BotReplyMax = 10
     }
 
     if _, exists := envVars["CHAT_STYLE"]; !exists {
-        VerboseLog("CHAT_STYLE not present in config. Setting default value 'NORMAL'.")
+        c.VerboseLog("CHAT_STYLE not present in config. Setting default value 'NORMAL'.")
         c.ChatStyle = "NORMAL"
     }
 
     if _, exists := envVars["SHOWCONFIG_ENABLED"]; !exists {
-        VerboseLog("SHOWCONFIG_ENABLED not present in config. Setting default value 'TRUE'.")
+        c.VerboseLog("SHOWCONFIG_ENABLED not present in config. Setting default value 'TRUE'.")
         c.ShowConfigEnabled = true
     }
 
@@ -153,7 +156,9 @@ func (c *Companion) Setup(envFile string) {
 
     // For Nomi room
     if c.CompanionType == "NOMI" {
-        c.NomiKin.Init()
+        SuppressLogs(func() {
+            c.NomiKin.Init()
+        })
 
         if c.ChatStyle == "ROOMS" {
             roomsString := c.Rooms
@@ -168,35 +173,39 @@ func (c *Companion) Setup(envFile string) {
 
             c.RoomObjects = map[string]Room{}
             for _, room := range rooms {
-                VerboseLog("Creating/adding Nomi %v to room: %v\n  Note: %v\n  Backchanneling: %v\n  RandomResponseChance: %v", c.CompanionId, room.Name, room.Note, room.Backchanneling, room.RandomResponseChance)
+                c.VerboseLog("Creating/adding Nomi to room: %v\n  Note: %v\n  Backchanneling: %v\n  RandomResponseChance: %v", room.Name, room.Note, room.Backchanneling, room.RandomResponseChance)
                 if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
-                    log.Printf("Error: RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
+                    c.Log("Error: RandomResponseChance must be between 0 and 100. Your value for Room %v is %v", room.Name, room.RandomResponseChance)
                 }
 
                 r, err := c.NomiKin.CreateNomiRoom(&room.Name, &room.Note, &room.Backchanneling, []string{c.CompanionId})
                 if err != nil {
-                    log.Printf("Error Nomi %v creating/adding to room %v\n Error: %v", c.CompanionId, room.Name, err)
+                    c.Log("Error checking if room exists: %v", err)
                 }
 
                 c.RoomObjects[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
 
                 if _, exists := RoomPrimaries[r.Name]; !exists {
                     // We are primary
-                    VerboseLog("%v is primary for room %v", c.CompanionId, r.Name)
+                    c.VerboseLog("Is primary for room %v", r.Name)
                     RoomPrimaries[r.Name] = c.CompanionId
                 }
             }
         }
     }
 
-    log.Printf("Finished setup of companion %v from file %v\n", c.CompanionId, envFile)
+    c.Log("Finished companion setup from file %v", envFile)
     if Verbose {
         PrintStructFields(c)
+    }
+
+    if len(c.CompanionId) > LogWidth {
+        LogWidth = len(c.CompanionId)
     }
 }
 
 func (c *Companion) RunDiscordBot() error {
-    VerboseLog("companion.RunDiscordBot: %v", c.CompanionId)
+    c.VerboseLog("companion.RunDiscordBot")
     dg, err := discordgo.New("Bot " + c.DiscordBotToken)
     if err != nil {
         log.Fatalf("Error creating Discord session: %v", err)
@@ -226,6 +235,9 @@ func (c *Companion) RunDiscordBot() error {
 
     c.RegisterSlashCommands(dg)
 
+    c.Log("Assigning companion to bot %v", dg.State.User.ID)
+    Companions[dg] = c
+
     UpdateStatus(dg)
     statusTicker := time.NewTicker(10 * time.Minute)
     defer statusTicker.Stop()
@@ -237,9 +249,6 @@ func (c *Companion) RunDiscordBot() error {
             }
         }
     }()
-
-    log.Printf("Assigning companion %s to bot %s", c.CompanionId, dg.State.User.ID)
-    Companions[dg] = c
 
     go c.Queue.ProcessMessages()
 

@@ -7,6 +7,7 @@ import (
 var Version = "v0.8.1"
 var RoomPrimaries = make(map[string]string)
 var Verbose = false
+var LogWidth = 5
 var Companions = make(map[*discordgo.Session]*Companion)
 var Banner = `
    _  __           _ __ ___               

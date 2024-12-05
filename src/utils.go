@@ -1,6 +1,7 @@
 package main
 
 import (
+    "bytes"
     "fmt"
     "io/ioutil"
     "log"
@@ -31,25 +32,6 @@ func PrintStructFields(c *Companion) {
         }
 
         fmt.Printf("  %s: %v\n", fieldName, fieldValue)
-    }
-}
-
-func VerboseLog(s string, args ...interface{}) {
-    if Verbose {
-        parts := strings.Split(s, "%v")
-        if len(parts)-1 != len(args) {
-            log.Println("Verbose Logging: Number of format specifiers does not match number of arguments.")
-        }
-
-        var sb strings.Builder
-        for i, part := range parts {
-            sb.WriteString(part)
-            if i < len(args) {
-                sb.WriteString(fmt.Sprintf("%v", args[i]))
-            }
-        }
-
-        log.Println(sb.String())
     }
 }
 
@@ -96,16 +78,24 @@ func WaitForShutdown(bots []*discordgo.Session) {
 }
 
 func UpdateStatus(dg *discordgo.Session) {
+    var workingCompanion *Companion
+    for b, c := range Companions {
+        if b.State.User.ID == dg.State.User.ID {
+            workingCompanion = c
+            break
+        }
+    }
+
     statusMessageLocation := "https://raw.githubusercontent.com/d3tourrr/NomiKin-Discord/refs/heads/main/StatusMessage.txt"
     statusResp, err := http.Get(statusMessageLocation)
     if err != nil {
-        log.Printf("Error retrieving status message: %v", err)
+        workingCompanion.Log("Error retrieving status message: %v", err)
     }
     defer statusResp.Body.Close()
 
     statusMessageContent, err := ioutil.ReadAll(statusResp.Body)
     if err != nil {
-        log.Printf("Error reading status message: %v", err)
+        workingCompanion.Log("Error reading status message: %v", err)
     }
 
     discordStatus := Version + " " + string(statusMessageContent)
@@ -119,7 +109,43 @@ func UpdateStatus(dg *discordgo.Session) {
         },
     })
     if err != nil {
-        log.Printf("Error setting status: %v", err)
+        workingCompanion.Log("Error setting status: %v", err)
     }
+
+    workingCompanion.VerboseLog("Updated Status: %v", discordStatus)
+}
+
+func SuppressGetRoomLogs(fn interface{}, args ...interface{}) []interface{} {
+    originalOutput := log.Writer()
+    defer log.SetOutput(originalOutput)
+
+    log.SetOutput(&bytes.Buffer{})
+
+    fnValue := reflect.ValueOf(fn)
+    if fnValue.Kind() != reflect.Func {
+        panic("withSuppressedLogsReturningAny: argument must be a function")
+    }
+
+    // Prepare arguments
+    reflectArgs := make([]reflect.Value, len(args))
+    for i, arg := range args {
+        reflectArgs[i] = reflect.ValueOf(arg)
+    }
+
+    results := fnValue.Call(reflectArgs)
+    output := make([]interface{}, len(results))
+
+    for i, result := range results {
+        output[i] = result.Interface()
+    }
+
+    return output
+}
+
+func SuppressLogs(fn func()) {
+    originalOutput := log.Writer()
+    defer log.SetOutput(originalOutput)
+    log.SetOutput(&bytes.Buffer{})
+    fn()
 }
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-    "log"
     "sync"
     "time"
 
@@ -48,7 +47,7 @@ func (q *MessageQueue) ProcessMessages() {
 
         err := SendMessageToCompanion(queuedMessage.Message, queuedMessage.Companion, queuedMessage.BotRespondNoForward)
         if err != nil {
-            log.Printf("Failed to send message to Companion API: %v", err)
+            queuedMessage.Companion.Log("Failed to send message to Companion API: %v", err)
             q.Enqueue(queuedMessage) // Requeue the message if failed
         }
 

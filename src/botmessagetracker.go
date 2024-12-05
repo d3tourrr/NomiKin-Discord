@@ -1,7 +1,6 @@
 package main
 
 import (
-    "log"
     "sync"
     "time"
 )
@@ -51,10 +50,10 @@ func (tracker *BotMessageTracker) TrackMessage(botID string, companion *Companio
     defer tracker.lock.Unlock()
 
     tracker.counts[botID] = append(tracker.counts[botID], time.Now())
-    VerboseLog("%v message from %v count: %v/%v", companion.CompanionId, botID, len(tracker.counts[botID]), companion.BotReplyMax)
+    companion.VerboseLog("Message from %v count: %v/%v", botID, len(tracker.counts[botID]), companion.BotReplyMax)
 
     if tracker.GetMessageCount(botID) > companion.BotReplyMax {
-        log.Printf("Received more than %v (BOT_MESSAGE_REPLY_MAX) messages from bot %v within the last hour. Not responding.\n", companion.BotReplyMax, botID)
+        companion.Log("Loop Prevention triggered. Got more than %v (BOT_MESSAGE_REPLY_MAX) messages from bot %v within the last hour.", companion.BotReplyMax, botID)
         tracker.counts[botID] = []time.Time{}
         return false
     }

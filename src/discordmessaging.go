@@ -1,7 +1,6 @@
 package main
 
 import (
-    "log"
     "regexp"
     "math/rand"
     "strings"
@@ -18,7 +17,7 @@ func UpdateMessage(m *discordgo.MessageCreate, companion *Companion) string {
         // Only if it's not a DM, otherwise this doesn't work - apparently this needs guild state info
         updatedMessage, err = m.ContentWithMoreMentionsReplaced(companion.DiscordSession)
         if err != nil {
-            log.Printf("Error replacing Discord mentions with usernames: %v", err)
+            companion.Log("Error replacing Discord mentions with usernames: %v", err)
         }
     }
 
@@ -38,7 +37,7 @@ func UpdateMessage(m *discordgo.MessageCreate, companion *Companion) string {
 
         repliedMessage, err := companion.DiscordSession.ChannelMessage(m.ChannelID, m.MessageReference.MessageID)
         if err != nil {
-            log.Printf("Error fetching replied message: %v\n", err)
+            companion.Log("Error fetching replied message: %v", err)
         }
 
         reU := regexp.MustCompile(`\{\{USERNAME\}\}`)
@@ -62,14 +61,14 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
     respondToThis, verboseReason := companion.ResponseNeeded(m)
 
     if respondToThis {
-        VerboseLog("%v - Response required: %v", companion.CompanionId, verboseReason)
+        companion.VerboseLog("Response required: %v", verboseReason)
         if m.Author.Bot {
             loopBreak = !companion.Tracker.TrackMessage(m.Author.ID, companion)
         }
 
         if loopBreak && !(companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS") {
             // Breaking the loop and don't worry about sending a message to the Nomi Room
-            VerboseLog("%v Loop Prevention active [type: %v | mode: %v], halting reply chain.", companion.CompanionId, companion.CompanionType, companion.ChatStyle)
+            companion.VerboseLog("Loop Prevention active [type: %v | mode: %v], halting reply chain.", companion.CompanionType, companion.ChatStyle)
             return nil
         }
 
@@ -108,10 +107,10 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
                         roomId := companion.RoomObjects[m.ChannelID].Uuid
                         companionReply, err = companion.NomiKin.RequestNomiRoomReply(&roomId, &companion.NomiKin.CompanionId)
                     } else {
-                        log.Printf("Error: Waited as long as we could, but room %v was never ready for a message from %v\n", m.ChannelID, companion.CompanionId)
+                        companion.Log("Error: Waited as long as we could, but room %v was never ready for a message", m.ChannelID)
                     }
                 } else {
-                    VerboseLog("%v Loop Prevention active [type: %v | mode: %v], halting reply chain.", companion.CompanionId, companion.CompanionType, companion.ChatStyle)
+                    companion.VerboseLog("Loop Prevention active [type: %v | mode: %v], halting reply chain.", companion.CompanionType, companion.ChatStyle)
                     return nil
                 }
             } else {
@@ -121,7 +120,7 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
             companionReply, err = companion.NomiKin.SendKindroidMessage(&updatedMessage)
         }
         if err != nil {
-            log.Printf("Error exchanging messages with companion: %v\n", err)
+            companion.Log("Error exchanging messages with companion: %v", err)
             stopTyping <- true
             return nil
         }
@@ -133,12 +132,12 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
         if m.GuildID == "" {
             _, sendErr := companion.DiscordSession.ChannelMessageSend(m.ChannelID, companionReply)
             if sendErr != nil {
-                log.Printf("Error sending message: %v\n", err)
+                companion.Log("Error sending message: %v", err)
             }
         } else {
             _, sendErr := companion.DiscordSession.ChannelMessageSendReply(m.ChannelID, companionReply, m.Reference())
             if sendErr != nil {
-                log.Printf("Error sending message: %v\n", err)
+                companion.Log("Error sending message: %v", err)
             }
         }
 
@@ -163,17 +162,17 @@ func NomiRoomSend(companion *Companion, m *discordgo.MessageCreate) {
         rand.Seed(time.Now().UnixNano())
         maxWait := len(companion.GetRoomMembers(m.ChannelID))
         randWait := rand.Intn(maxWait) + rand.Intn(4)
-        VerboseLog("%v - Sleeping %v seconds to avoid Nomi Room collision", companion.CompanionId, randWait)
+        companion.VerboseLog("Sleeping %v seconds to avoid Nomi Room collision", randWait)
         time.Sleep(time.Second * time.Duration(randWait))
 
         canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
         if canSend {
             _, err := companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
             if err != nil {
-                log.Printf("Error sending message to room: %v\n", err)
+                companion.Log("Error sending message to room: %v", err)
             }
         } else {
-            log.Printf("Error: Waited as long as we could, but room %v was never ready for a message from %v\n", m.ChannelID, companion.CompanionId)
+            companion.Log("Error: Waited as long as we could, but room %v was never ready for a message", m.ChannelID)
         }
     }
 }
@@ -189,7 +188,7 @@ func (companion *Companion) HandleMessageCreate(s *discordgo.Session, m *discord
 
     // Ignore messages with embeds
     if len(m.Embeds) > 0 {
-        VerboseLog("%v - dropping message from %v because it has embeds", companion.CompanionId, m.Author.ID)
+        companion.VerboseLog("Dropping message from %v because it has embeds", m.Author.ID)
         return
     }
 
@@ -205,7 +204,7 @@ func (companion *Companion) HandleMessageCreate(s *discordgo.Session, m *discord
             for b, c := range Companions {
                 if b.State.User.ID == m.Author.ID && Contains(roomMems, c.CompanionId) {
                     botRespondNoForward = true
-                    VerboseLog("%v message from Companion %v is in the same room %v - not forwarding to the room", companion.CompanionId, c.CompanionId, m.ChannelID)
+                    companion.VerboseLog("Message from Companion %v is in the same room %v - not forwarding to the room", c.CompanionId, m.ChannelID)
                     break
                 }
             }

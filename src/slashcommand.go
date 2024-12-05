@@ -3,7 +3,6 @@ package main
 import (
     "fmt"
     "image"
-    "log"
     "net/http"
     "strconv"
     "strings"
@@ -21,22 +20,24 @@ func (c *Companion) RegisterSlashCommands(s *discordgo.Session) {
 
     _, err := s.ApplicationCommandCreate(c.DiscordSession.State.User.ID, "", command)
     if err != nil {
-        log.Printf("Cannot create slash command for showconfig: %v\n", err)
+        c.Log("Cannot create slash command for showconfig: %v", err)
     }
-    VerboseLog("%v - registered 'showconfig' slash command", c.CompanionId)
+    c.VerboseLog("Registered 'showconfig' slash command")
 }
 
 func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.InteractionCreate) {
     if i.Type == discordgo.InteractionApplicationCommand {
         switch i.ApplicationCommandData().Name {
         case "showconfig":
-            VerboseLog("%v 'showconfig' command triggered [command status: %v]", c.CompanionId, c.ShowConfigEnabled)
+            c.Log("Command 'showconfig' triggered [command enabled: %v]", c.ShowConfigEnabled)
             var embed *discordgo.MessageEmbed
+            desc := "Bot Info: [NomiKin-Discord](https://github.com/d3tourrr/NomiKin-Discord) by <@498559262411456566>"
 
             if !c.ShowConfigEnabled {
                 embed = &discordgo.MessageEmbed{
                     Title: "`/showconfig` command disabled for this companion",
-                    Description: "[NomiKin-Discord Integration](https://github.com/d3tourrr/NomiKin-Discord) by <@498559262411456566>",
+                    Description: desc,
+                    Color: 0xff0000,
                     Fields: []*discordgo.MessageEmbedField{
                         {
                             Name: "Adjust `.env` file's `SHOWCONFIG_ENABLED` setting if you are responsible for this companion and want this command turned on.",
@@ -78,7 +79,7 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
 
                 embed = &discordgo.MessageEmbed{
                     Title: fmt.Sprintf("Configuration Details: %v", c.DiscordSession.State.User.Username),
-                    Description: "[NomiKin-Discord Integration](https://github.com/d3tourrr/NomiKin-Discord) by <@498559262411456566>",
+                    Description: desc,
                     Color: color,
                     Fields: []*discordgo.MessageEmbedField{
                         {
@@ -157,7 +158,7 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
             })
 
             if err != nil {
-                log.Printf("%v failed to respond to 'showconfig' with embed: %v\n", c.CompanionId, err)
+                c.Log("Failed to respond to 'showconfig' with embed: %v", err)
             }
         }
     }
