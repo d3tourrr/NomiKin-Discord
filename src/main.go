@@ -28,6 +28,10 @@ func main() {
         return
     }
 
+    if len(envFiles) == 0 {
+        fmt.Println("Found no .env files. Make sure you have files named 'CompanionName.env' in your 'bots' folder. Make sure they don't still have a '.bak' extension like the example file does.\nExiting...")
+        return
+    }
     log.Printf("Env files: %v\n", envFiles)
 
     var wg sync.WaitGroup
