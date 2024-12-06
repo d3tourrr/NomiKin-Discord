@@ -1,4 +1,4 @@
-# Make your changes to this file and rename it to `.env` (remove the `.example` suffix)
+# Make your changes to this file and rename it to `companionname.env` (yes, change the extesion from .bak to .env)
 
 # Discord Bot Token - available in Discord Developer Portal - no quotation marks
 DISCORD_BOT_TOKEN=
@@ -26,7 +26,7 @@ MESSAGE_PREFIX="*Discord Message from {{USERNAME}}:*"
 # to be different than the regular message prefix, fill this out. Otherwise leave blank/empty.
 # Ex: *{{USERNAME}} says to {{REPLY_TO}}:*
 # Use `{{REPLY_TO}}` to insert the username of the person being replied to.
-REPLY_PREFIX="Discord Messge from {{USERNAME}}, replying to {{REPLY_TO}}*"
+REPLY_PREFIX="*Discord Messge from {{USERNAME}}, replying to {{REPLY_TO}}:*"
 
 # Should the companion reply when they are directly pinged/replied to? TRUE or FALSE - no quotation marks.
 # This should only be set to FALSE if your companion is set to reply some other way
@@ -52,6 +52,9 @@ RESPONSE_KEYWORDS=""
 # companion will track this metric for both of their conversation partners independently.
 # Set to -1 to never stop replying. Set to 0 to never reply to another companion.
 BOT_MESSAGE_REPLY_MAX=10
+
+# Should the /showconfig command be enabled for this companion or not? TRUE or FALSE
+SHOWCONFIG_ENABLED=TRUE
 
 ########### NOMI ROOMS ###########
 # Nomi supports a group chat style concept called "Rooms". When using the Rooms mode, your Nomi will not only
