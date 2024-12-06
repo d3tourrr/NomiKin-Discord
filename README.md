@@ -39,19 +39,16 @@ You can run a Discord integration for as many Nomis and Kins in one instance of 
      * Open the side bar while chatting with a Kindroid and click General, then scroll to the bottom and expand API & advanced integration
      * Copy your API key
      * Get the Kindroid ID from the same place you copied your API key - note, you have to be chatting with the specific Kindroid who you wish to bring to Discord
-1. Setup your environment variable (more detail in the [Setting Up Your .env File](#setting-up-your-env-file) section below)
+1. Setup your environment variable
    1. Make a copy of the `example.bak` file and name it `CompanionName.env` (Yes, change the extension from `.bak` to `.env`).
       * These files must be located in the `./bots/` folder.
    1. Add the values you gathered above on the right-hand side of the equals sign in the place they go.
-   1. Set your optional message and reply prefixes - leading text that is sent to every message your companion receives to help them differentiate between Discord messages and messages sent within the Nomi or Kindroid app.
-   1. Review the other boolean (true/false) settings and their defaults. Make sure things are setup to your preference.
-   1. For keywords that will trigger your companion to respond, even if the message doesn't ping them, like their name (ex: `breakfast, bears` - your companion will reply to any message that contains the words "breakfast" or "bears").
-   1. If using Nomi Rooms, see the below section on configuring that part of your `.env` file.
+   1. More detail in the [Setting Up Your .env File](#setting-up-your-env-file) section below
 1. Build and run the Docker container
    * Run either `start-windows-companion.ps1` on Windows (or in PowerShell) or `start-linux-companion.sh` on Linux (or in Bash, including Git Bash)
    * Or run the following commands (Note: the above scripts start the container in a detached state, meaning you don't see the log output. The below commands start the container in an attached state, which means you see the log output, but the container, and therefore the Companion/Discord integration dies when you close your console.)
-     1. Build the Docker image: `docker build -t nomikin-discord .`
-     1. Run the Docker container: `docker run nomikin-discord`
+     1. Build the Docker image: `docker build -t nomikindiscord .`
+     1. Run the Docker container: `docker run nomikindiscord`
 1. Interact with your companion in Discord!
 
 > [!TIP]
@@ -66,10 +63,10 @@ You can run a Discord integration for as many Nomis and Kins in one instance of 
 > [!CAUTION]
 > Make a copy of the `example.bak` file that comes with this repo, and work off of the copy. That way, if you mess it up, you'll have a backup copy to refer to.
 > 
-> Make sure you remember to rename the `example.bak` file to `YourCompanionName.env`. It's an easy mistake to make to forget to change the file extension.
+> Make sure you remember to rename the copy you make of the `example.bak` file to `YourCompanionName.env`. It's an easy mistake to make to forget to change the file extension.
 
 > [!TIP]
-> All `.env` files must be in the `./bots/` folder, otherwise they will be ignored. However, if you want to further organize your `.env` files, you can put them in subfolders within the `.env` folder, and they will still be picked up. If you want to keep a `.env` file, but not actually use it, move it out of the `./bots/` folder, or change its extension to `.bak.`.
+> All `.env` files must be in the `./bots/` folder, otherwise they will be ignored. However, if you want to further organize your `.env` files, you can put them in subfolders within the `.env` folder, and they will still be picked up. So files anmed `./bots/nomis/vicky.env` and `./bots/kins/marie.env` will both be picked up. If you want to keep a `.env` file, but not actually use it, move it out of the `./bots/` folder, or change its extension to `.bak.`.
 
 ## `.env` File Fields
 
@@ -79,16 +76,16 @@ You can run a Discord integration for as many Nomis and Kins in one instance of 
 | `COMPANION_TOKEN` | String/**SECRET** | No default value | The token you get from the Nomi or Kindroid app that's specific to your account (not unique per companion). **Do not share this token with anyone, ever.** |
 | `COMPANION_ID` | String/Unique Identifier | No default value | Uniquely identifies the Nomi or Kindroid that you're bringing into Discord. Available in the Nomi or Kindroid apps, described in the Setup steps above. |
 | `COMPANION_TYPE` | String/Set | No default value | Must be either `NOMI` or `KINDROID`, specify which platform your companion is on. |
-| `MESSAGE_PREFIX` | String | `*Discord Message from {{USERNAME}}:*` | Text that gets appended to every message that is sent to your companion. This is super helpful if you're not the only one communicating with your companion (like if they're in a server with other people, not just you), so they can tell who's sending a message. The `{{USERNAME}}` keyword is a variable you can move around, and is replaced with a message sender's username when a message goes to your companion. If you don't include the `{{USERNAME}}` variable, then your companion will have no way of telling who sent them a message, and will assume they all came from you. |
-| `REPLY_PREFIX` | String | `*Discord Message from {{USERNAME}}, replying to {{REPLY_TO}}:*` Similar to `MESSAGE_PREFIX`, but used when the incoming message is a reply to another message. If a message isn't a reply, or if `REPLY_PREFIX` is not specified, the `MESSAGE_PREFIX` will be used. `REPLY_PREFIX` supports the `{{USERNAME}}` variable, and another called `{{REPLY_TO}}` which becomes the username of the author of the message that's being replied to.
+| `MESSAGE_PREFIX` | String | `*Discord Message from {{USERNAME}}:*` | Text that gets appended to every message that is sent to your companion. This is super helpful if you're not the only one communicating with your companion (like if they're in a server with other people, not just you), so they can tell who's sending a message. The `{{USERNAME}}` keyword is a variable you can move around, and is replaced with a message sender's username when a message goes to your companion. If you don't include the `{{USERNAME}}` variable, then your companion will have no way of telling who sent them a message, and will assume they all came from you. See [Interacting With Your Companion](#interacting-in-discord-with-your-companion) section below. |
+| `REPLY_PREFIX` | String | `*Discord Message from {{USERNAME}}, replying to {{REPLY_TO}}:*` | Similar to `MESSAGE_PREFIX`, but used when the incoming message is a reply to another message. If a message isn't a reply, or if `REPLY_PREFIX` is not specified, the `MESSAGE_PREFIX` will be used. `REPLY_PREFIX` supports the `{{USERNAME}}` variable, and another called `{{REPLY_TO}}` which becomes the username of the author of the message that's being replied to.
 | `RESPOND_TO_PING` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your companion replies when they are pinged, or one of their messages is replied to. |
 | `RESPOND_TO_ROLE_PING` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your companion replies when a role they have is pinged, but not directly. This includes `@everyone` pings. |
 | `RESPOND_TO_DIRECT_MESSAGE` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your companion replies to Direct Messages. Does not work in Nomi Rooms mode. |
 | `RESPONSE_KEYWORDS` | String | No default value | List of words, separated by commas, wrapped in quotes. A list of words that your companion will respond to, even if they otherwise wouldn't. Words are case insensitive, and must have letters and numbers only. No spaces or special characters. (Example: `"bears, pickles, parks`) |
-| `BOT_MESSAGE_REPLY_MAX` | Number | `10` | How many messages from other companions that your companion will reply to before stopping. This prevents scenarios where one companion pings another, and they enter into an infinite loop, replying to each other forever because they're pinged. See [Infinite Loop Prevention](#infinite-loop-prevention) section below. | 
-| `SHOWCONFIG_ENABLED` | Boolean | `TRUE` | `TRUE` or `FALSE` only. This integration has a `/showconfig` command per companion that puts the non-secret content from your `.env` file and some of the Discord Bot information about your companion into the chat. The permissions to run slash commands in Discord are managed within Discord, not within your bot. If this is `TRUE`, anybody with permission to run slash commands in a server can run this for your companion. If you don't like that, then set this to `FALSE`. None of the values returned by the `/showconfig` command are sensitive, but you might have your own reasons for not wanting people to see this content. |
-| `CHAT_STYLE` | String/Set | `NORMAL` | `NORMAL` or `ROOMS` only. In `NORMAL` mode, your companion is not aware of messages that they are not responding to. `ROOMS` mode is only for Nomis. See below section on Nomi Rooms. |
-| `NOMI_ROOMS` | String/Compressed JSON | No default value | See the Nomi Rooms section below. |
+| `BOT_MESSAGE_REPLY_MAX` | Number | `10` | How many messages from other companions that your companion will reply to before stopping. This prevents scenarios where one companion pings another, and they enter into an infinite loop, replying to each other forever because they're pinged. Set to `-1` to disable. See [Infinite Loop Prevention](#infinite-loop-prevention) section below. | 
+| `SHOWCONFIG_ENABLED` | Boolean | `TRUE` | `TRUE` or `FALSE` only. This integration has a `/showconfig` command per companion that puts the non-secret content from your `.env` file and some of the Discord Bot information about your companion into the chat. The permissions to run slash commands in Discord are managed within Discord, not within your bot. If this is `TRUE`, anybody with permission to run slash commands in a server can run this for your companion. If you don't like that, then set this to `FALSE`. None of the values returned by the `/showconfig` command are sensitive, but you might have your own reasons for not wanting people to see this content. See [`/showconfig` Command](#showconfig-command) section below. |
+| `CHAT_STYLE` | String/Set | `NORMAL` | `NORMAL` or `ROOMS` only. In `NORMAL` mode, your companion is not aware of messages that they are not responding to. `ROOMS` mode is only for Nomis. See below section on [Nomi Rooms](#nomi-rooms). |
+| `NOMI_ROOMS` | String/Compressed JSON | No default value | See the [Nomi Rooms](#nomi-rooms) section below. |
 
 # Nomi Rooms
 
@@ -188,13 +185,17 @@ The helper scripts essentially just wrap a couple of Docker commands. If you'd p
 
 #### Build the Docker image
 
-`docker build -t nomikindiscord .`
+`docker build -t NomiKinDiscord .`
 
 This builds the Docker image that will run the Discord integrations for both Vicky and Marie.
 
 #### Run the Docker containers
 
-`docker run -d --name nomikindiscord`
+`docker run -d --name NomiKinDiscord NomiKinDiscord`
+
+or with [verbose logging](#enable-verbose-logging) enabled (helpful for troubleshooting issues)
+
+`docker run -d --name NomiKinDiscord -e NOMIKINLOGGING=verbose NomiKinDiscord`
 
 Now I have both companions up and running.
 
@@ -265,17 +266,19 @@ You can see the logs for your running integration by typing `docker logs --tail 
 
 **This troubleshooting section is not a replacement for actually knowing what you're doing.** It's just a handful of commands that can help you get support.
 
+In the below sections, the default value for `<name>` is `NomiKinDiscord`, but yours may be different.
+
 | Dependency | How To Get Support |
 | - | - |
 | Basic Docker operations | [Getting Started With Docker](https://docs.docker.com/get-started/) |
 | Discord Bots | [Discord Developer Docs](https://discord.com/developers/docs/intro) |
 | Nomi.AI | [Nomi.ai Discord](https://discord.gg/NomiAI) |
-| Kindroid.AI [Kindroid.ai Discord](https://discord.gg/kindroid) |
+| Kindroid.AI | [Kindroid.ai Discord](https://discord.gg/kindroid) |
 | Git | [W3Schools Git Basics](https://www.w3schools.com/git/default.asp) |
 
 ## What is the name of my running container?
 
-If your container is running, type `docker ps` to see a list of the running containers. The name is shown, and you can use that on your `docker logs` commands. Type `docker logs --tail 40 <name of container>` to see the last 40 logged lines for your running container.
+If your container is running, type `docker ps` to see a list of the running containers. The name is shown, and you can use that on your `docker logs` commands. Type `docker logs --tail 40 <name>` to see the last 40 logged lines for your running container.
 
 ## What if my container isn't running?
 
