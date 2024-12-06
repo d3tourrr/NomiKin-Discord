@@ -1,4 +1,4 @@
-$containerName = "NomiKinDiscord"
+$containerName = "nomikindiscord"
 
 docker container rm $containerName -f
 docker build -t $containerName $PSScriptRoot

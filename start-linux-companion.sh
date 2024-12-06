@@ -1,6 +1,6 @@
 #!/bin/bash
 
-containerName="NomiKinDiscord"
+containerName="nomikindiscord"
 scriptroot="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 docker container rm $containerName -f
 docker build -t $containerName $scriptroot
