@@ -9,6 +9,7 @@
   * `EMOJI_BAN_LIST` - A list of emojis (wrapped in quotes, no spaces, no commas, etc. Ex: `"🐶🐕🦮🐕‍🦺"`) that should never be used as reactions. If there are emojis in this list, any emoji NOT in this list can be used as a reaction.
   * If both `EMOJI_ALLOW_LIST` and `EMOJI_BAN_LIST` are provided, `EMOJI_ALLOW_LIST` will take precedence and `EMOJI_BAN_LIST` will be ignored.
 * Bugfix: Companions set to respond to DMs would not. Now, they do.
+* Bugfix: `/showconfig` command is now broken up into several messages to work around Discord length limits.
 
 ## 0.8.1
 

@@ -31,7 +31,18 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
         case "showconfig":
             c.Log("Command 'showconfig' triggered [command enabled: %v]", c.ShowConfigEnabled)
             var embed *discordgo.MessageEmbed
+            var err error
             desc := "Bot Info: [NomiKin-Discord](https://github.com/d3tourrr/NomiKin-Discord) by <@498559262411456566>"
+            var user *discordgo.User
+            if i.Member != nil && i.Member.User != nil {
+                user = i.Member.User
+            } else {
+                user = i.User
+            }
+            footer := &discordgo.MessageEmbedFooter{
+                Text: fmt.Sprintf("Requested for %v (%v - %v)\n[at UTC: %v]", user.GlobalName, user.Username, user.ID, time.Now().UTC().Format("2006-01-02 @ 15:04:04")),
+                IconURL: user.AvatarURL("80"),
+            }
 
             if !c.ShowConfigEnabled {
                 embed = &discordgo.MessageEmbed{
@@ -45,15 +56,16 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                             Inline: false,
                         },
                     },
+                    Footer: footer,
                 } 
-            } else {
-                var user *discordgo.User
-                if i.Member != nil && i.Member.User != nil {
-                    user = i.Member.User
-                } else {
-                    user = i.User
-                }
 
+                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+                    Type: discordgo.InteractionResponseChannelMessageWithSource,
+                    Data: &discordgo.InteractionResponseData{
+                        Embeds: []*discordgo.MessageEmbed{embed},
+                    },
+                })
+            } else {
                 avatarUrl := fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.png", s.State.User.ID, s.State.User.Avatar)
                 color, err := GetPrimaryColorFromImage(avatarUrl)
                 if err != nil {
@@ -77,8 +89,9 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     }
                 }
 
+                // Bot info
                 embed = &discordgo.MessageEmbed{
-                    Title: fmt.Sprintf("Configuration Details: %v", c.DiscordSession.State.User.Username),
+                    Title: fmt.Sprintf("Discord Bot Details: %v", c.DiscordSession.State.User.Username),
                     Description: desc,
                     Color: color,
                     Fields: []*discordgo.MessageEmbedField{
@@ -87,6 +100,23 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                             Value: fmt.Sprintf("**Bot ID:** `%v`\n**Username:** `%v`\n**Server Nickname:** `%v`\n**Roles:** `%v`", c.DiscordSession.State.User.ID, c.DiscordSession.State.User.Username, botNick, strings.Join(botRoleNames, "`, `")),
                             Inline: false,
                         },
+                    },
+                    Footer: footer,
+                }
+
+                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+                    Type: discordgo.InteractionResponseChannelMessageWithSource,
+                    Data: &discordgo.InteractionResponseData{
+                        Embeds: []*discordgo.MessageEmbed{embed},
+                    },
+                })
+
+                // Companion info
+                embed = &discordgo.MessageEmbed{
+                    Title: fmt.Sprintf("Companion Details: %v", c.DiscordSession.State.User.Username),
+                    Description: desc,
+                    Color: color,
+                    Fields: []*discordgo.MessageEmbedField{
                         {
                             Name: "Companion Info",
                             Value: fmt.Sprintf("**Companion ID:** `%v`\n**Companion Type:** `%v`", c.CompanionId, c.CompanionType),
@@ -102,11 +132,23 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                             Value: fmt.Sprintf("`%v`", c.ReplyPrefix),
                             Inline: false,
                         },
-                        {
-                            Name: "Response Triggers",
-                            Value: "",
-                            Inline: false,
-                        },
+                    },
+                    Footer: footer,
+                }
+
+                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+                    Type: discordgo.InteractionResponseChannelMessageWithSource,
+                    Data: &discordgo.InteractionResponseData{
+                        Embeds: []*discordgo.MessageEmbed{embed},
+                    },
+                })
+
+                // Response triggers
+                embed = &discordgo.MessageEmbed{
+                    Title: fmt.Sprintf("Response Triggers: %v", c.DiscordSession.State.User.Username),
+                    Description: desc,
+                    Color: color,
+                    Fields: []*discordgo.MessageEmbedField{
                         {
                             Name: "Ping/Replied To",
                             Value: fmt.Sprintf("`%v`", strconv.FormatBool(c.RespondPing)),
@@ -132,6 +174,60 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                             Value: fmt.Sprintf("`%v`", fmt.Sprint(c.BotReplyMax)),
                             Inline: false,
                         },
+                    },
+                    Footer: footer,
+                }
+
+                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+                    Type: discordgo.InteractionResponseChannelMessageWithSource,
+                    Data: &discordgo.InteractionResponseData{
+                        Embeds: []*discordgo.MessageEmbed{embed},
+                    },
+                })
+
+                // Emoji to reactions
+                embed = &discordgo.MessageEmbed{
+                    Title: fmt.Sprintf("Emojis to Reactions Details: %v", c.DiscordSession.State.User.Username),
+                    Description: desc,
+                    Color: color,
+                    Fields: []*discordgo.MessageEmbedField{
+                        {
+                            Name: "Emoji to Reactions Enabled",
+                            Value: fmt.Sprintf("`%v`", c.EmojisToReact),
+                            Inline: true,
+                        },
+                        {
+                            Name: "Max Reactions",
+                            Value: fmt.Sprintf("`%v`", c.MaxReactions),
+                            Inline: true,
+                        },
+                        {
+                            Name: "Emoji Allow List",
+                            Value: fmt.Sprintf("%v", c.EmojiAllowList),
+                            Inline: false,
+                        },
+                        {
+                            Name: "Emoji Ban List",
+                            Value: fmt.Sprintf("%v", c.EmojiBanList),
+                            Inline: false,
+                        },
+                    },
+                    Footer: footer,
+                }
+
+                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+                    Type: discordgo.InteractionResponseChannelMessageWithSource,
+                    Data: &discordgo.InteractionResponseData{
+                        Embeds: []*discordgo.MessageEmbed{embed},
+                    },
+                })
+
+                // Chat style
+                embed = &discordgo.MessageEmbed{
+                    Title: fmt.Sprintf("Configuration Details: %v", c.DiscordSession.State.User.Username),
+                    Description: desc,
+                    Color: color,
+                    Fields: []*discordgo.MessageEmbedField{
                         {
                             Name: "Chat Style",
                             Value: fmt.Sprintf("`%v`", c.ChatStyle),
@@ -143,19 +239,16 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                             Inline: false,
                         },
                     },
-                    Footer: &discordgo.MessageEmbedFooter{
-                        Text: fmt.Sprintf("Requested for %v (%v - %v)\n[at UTC: %v]", user.GlobalName, user.Username, user.ID, time.Now().UTC().Format("2006-01-02 @ 15:04:04")),
-                        IconURL: user.AvatarURL("80"),
-                    },
+                    Footer: footer,
                 }
-            }
 
-            err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-                Type: discordgo.InteractionResponseChannelMessageWithSource,
-                Data: &discordgo.InteractionResponseData{
-                    Embeds: []*discordgo.MessageEmbed{embed},
-                },
-            })
+                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+                    Type: discordgo.InteractionResponseChannelMessageWithSource,
+                    Data: &discordgo.InteractionResponseData{
+                        Embeds: []*discordgo.MessageEmbed{embed},
+                    },
+                })
+            }
 
             if err != nil {
                 c.Log("Failed to respond to 'showconfig' with embed: %v", err)
