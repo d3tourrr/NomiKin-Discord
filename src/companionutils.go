@@ -226,16 +226,15 @@ func (c *Companion) GetEligibleEmojis(message string) []string {
             foundEmojis = append(foundEmojis, m)
         }
     }
+    c.VerboseLog("Found emojis in message, checking eligibility to be used as reactions: %v", foundEmojis)
 
     for _, emoji := range foundEmojis {
-        c.VerboseLog("Emoji found: %v", emoji)
         if !Contains(emojis, emoji) {
-            c.VerboseLog("Emoji not already in list: %v", emoji)
             if len(c.EmojiAllowList) > 0 && Contains(c.EmojiAllowList, emoji) {
-                c.VerboseLog("Emoji is in allow list: %v", emoji)
+                c.VerboseLog("Eligible: Emoji is in allow list: %v", emoji)
                 emojis = append(emojis, emoji)
             } else if len(c.EmojiAllowList) == 0 && !Contains(c.EmojiBanList, emoji) {
-                c.VerboseLog("Emoji is not in ban list: %v", emoji)
+                c.VerboseLog("Eligible: Emoji is not in ban list: %v", emoji)
                 emojis = append(emojis, emoji)
             }
         }

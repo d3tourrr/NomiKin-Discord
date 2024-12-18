@@ -143,33 +143,33 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
 
         // Parse out emojis to use as reactions to the original message
         if companion.EmojisToReact {
-            companion.VerboseLog("EmojisToReact enabled. Adding reactions to message: %v", m.ID)
+            companion.VerboseLog("EmojisToReact enabled. Adding reactions to message from %v", m.Author.ID)
             eligibleEmojis := companion.GetEligibleEmojis(companionReply)
-            companion.VerboseLog("EligibleEmojis: %v", eligibleEmojis)
             randEmojis := make([]string, companion.MaxReactions)
-            companion.VerboseLog("RandEmojis: %v", randEmojis)
 
             if len(eligibleEmojis) > 0 {
-                if companion.MaxReactions > len(eligibleEmojis) {
+                companion.VerboseLog("Eligible Emojis: %v", eligibleEmojis)
+                if companion.MaxReactions >= len(eligibleEmojis) {
                     randEmojis = eligibleEmojis
                 } else {
-                    rand.Seed(time.Now().UnixNano())
-
-                    for i := 0; i < companion.MaxReactions; i++ {
-                        index := rand.Intn(len(eligibleEmojis))
-                        randEmojis[i] = eligibleEmojis[index]
+                    for i := len(eligibleEmojis) - 1; i > 0; i-- {
+                        j := rand.Intn(i + 1)
+                        eligibleEmojis[i], eligibleEmojis[j] = eligibleEmojis[j], eligibleEmojis[i]
                     }
 
-                    companion.VerboseLog("Adding reactions to message: %v - %v", m.ID, randEmojis)
-                    for _, emoji := range randEmojis {
-                        err := companion.DiscordSession.MessageReactionAdd(m.ChannelID, m.ID, emoji)
-                        if err != nil {
-                            companion.Log("Error adding reaction to message: %v", err)
-                        }
+                    randEmojis = eligibleEmojis[:companion.MaxReactions]
+                    companion.VerboseLog("RandEmojis: %v (%v/%v)", randEmojis, len(randEmojis), len(eligibleEmojis))
+                }
+
+                companion.VerboseLog("Adding reactions to message: %v", randEmojis)
+                for _, emoji := range randEmojis {
+                    err := companion.DiscordSession.MessageReactionAdd(m.ChannelID, m.ID, emoji)
+                    if err != nil {
+                        companion.Log("Error adding reaction to message: %v", err)
                     }
                 }
             } else {
-                companion.VerboseLog("No eligible emojis found for message: %v", m.ID)
+                companion.VerboseLog("No eligible emojis found")
             }
         }
 
