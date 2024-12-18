@@ -24,6 +24,10 @@ type Companion struct {
     RespondRole     bool
     RespondDM       bool
     Keywords        string
+    EmojisToReact   bool
+    MaxReactions    int
+    EmojiAllowList  []string
+    EmojiBanList    []string
     BotReplyMax     int
     ChatStyle       string
     Rooms           string
@@ -100,12 +104,26 @@ func (c *Companion) Setup(envFile string) {
                 log.Fatalf("RESPOND_TO_ROLE_PING must be set to either TRUE or FALSE. Set RESPOND_TO_ROLE_PING correctly in %v", envFile)
             }
         case "RESPOND_TO_DIRECT_MESSAGE":
-            c.RespondRole, err = strconv.ParseBool(value)
+            c.RespondDM, err = strconv.ParseBool(value)
             if err != nil {
                 log.Fatalf("RESPOND_TO_DIRECT_MESSAGE must be set to either TRUE or FALSE. Set RESPOND_TO_DIRECT_MESSAGE correctly in %v", envFile)
             }
         case "RESPONSE_KEYWORDS":
             c.Keywords = value
+        case "EMOJIS_TO_REACT":
+            c.EmojisToReact, err = strconv.ParseBool(value)
+            if err != nil {
+                log.Fatalf("EMOJIS_TO_REACT must be set to either TRUE or FALSE. Set EMOJIS_TO_REACT correctly in %v", envFile)
+            }
+        case "EMOJI_ALLOW_LIST":
+            c.EmojiAllowList = strings.Split(value, "")
+        case "EMOJI_BAN_LIST":
+            c.EmojiBanList = strings.Split(value, "")
+        case "MAX_REACTIONS":
+            c.MaxReactions, err = strconv.Atoi(value)
+            if err != nil {
+                log.Fatalf("Max Reactions was not set to a number. Fix MAX_REACTIONS in %v", envFile)
+            }
         case "BOT_MESSAGE_REPLY_MAX":
             c.BotReplyMax, err = strconv.Atoi(value)
             if err != nil {
@@ -130,6 +148,16 @@ func (c *Companion) Setup(envFile string) {
     if _, exists := envVars["RESPOND_TO_PING"]; !exists {
         c.VerboseLog("RESPOND_TO_PING not present in config. Setting default value 'TRUE'.")
         c.RespondPing = true
+    }
+
+    if _, exists := envVars["EMOJIS_TO_REACT"]; !exists {
+        c.VerboseLog("EMOJIS_TO_REACT not present in config. Setting default value 'TRUE'.")
+        c.EmojisToReact = true
+    }
+
+    if _, exists := envVars["MAX_REACTIONS"]; !exists {
+        c.VerboseLog("MAX_REACTIONS not present in config. Setting default value '5'.")
+        c.MaxReactions = 5
     }
 
     if _, exists := envVars["BOT_MESSAGE_REPLY_MAX"]; !exists {

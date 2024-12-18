@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.2
+
+* Bugfix: Companions set to respond to DMs would not. Now, they do.
+
 ## 0.8.1
 
 > [!WARNING]

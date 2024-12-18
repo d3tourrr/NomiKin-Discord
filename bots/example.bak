@@ -46,6 +46,21 @@ RESPOND_TO_DIRECT_MESSAGE=TRUE
 # Ex: "pickles, bears"
 RESPONSE_KEYWORDS=""
 
+# Emojis in a message can be made into reactions from your companion on the message that triggered the companion message
+# Enable by setting EMOJI_TO_REACT to TRUE. Set to FALSE to disable.
+EMOJI_TO_REACT=TRUE
+
+# How many reactions should the companion add to a message? - no quotation marks
+MAX_REACTIONS=5
+
+# Allow list of emojis to react with. If both an allow list and a block list are set, the allow list will take precedence.
+# Enter as one string, no spaces or commas. Ex: "👍👎🤩🫠🤠"
+EMOJI_ALLOW_LIST=""
+
+# Block list of emojis to react with. If both an allow list and a block list are set, the allow list will take precedence.
+# Enter as one string, no spaces or commas. Ex: "👍👎🤩🫠🤠"
+EMOJI_BAN_LIST=""
+
 # Infinite loop prevention: Your companion tracks how many messages they've received from another companion within
 # the last hour. If they have received more than the this number of messages from a companion, they will not respond.
 # This is tracked per companion. If your companion is talking with two other companions at the same time, your

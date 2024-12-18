@@ -217,3 +217,29 @@ func (c *Companion) Log(s string, args ...interface{}) {
     log.Printf("%v%v %v", strings.Repeat(" ", cPad), cBit, sb.String())
 }
 
+func (c *Companion) GetEligibleEmojis(message string) []string {
+    var emojis []string
+    emojiRegex := regexp.MustCompile(`[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}\x{1F900}-\x{1F9FF}\x{1F1E0}-\x{1F1FF}]+`)
+    var foundEmojis []string
+    for _, match := range emojiRegex.FindAllString(message, -1) {
+        for _, m := range strings.Split(match, "") {
+            foundEmojis = append(foundEmojis, m)
+        }
+    }
+
+    for _, emoji := range foundEmojis {
+        c.VerboseLog("Emoji found: %v", emoji)
+        if !Contains(emojis, emoji) {
+            c.VerboseLog("Emoji not already in list: %v", emoji)
+            if len(c.EmojiAllowList) > 0 && Contains(c.EmojiAllowList, emoji) {
+                c.VerboseLog("Emoji is in allow list: %v", emoji)
+                emojis = append(emojis, emoji)
+            } else if len(c.EmojiAllowList) == 0 && !Contains(c.EmojiBanList, emoji) {
+                c.VerboseLog("Emoji is not in ban list: %v", emoji)
+                emojis = append(emojis, emoji)
+            }
+        }
+    }
+
+    return emojis
+}
