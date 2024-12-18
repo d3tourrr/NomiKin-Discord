@@ -51,14 +51,16 @@ RESPONSE_KEYWORDS=""
 EMOJI_TO_REACT=TRUE
 
 # How many reactions should the companion add to a message? - no quotation marks
+# Discord limits the number of unique emoji reactions to 20 per message
 MAX_REACTIONS=5
 
-# Allow list of emojis to react with. If both an allow list and a block list are set, the allow list will take precedence.
-# Enter as one string, no spaces or commas. Ex: "👍👎🤩🫠🤠"
+# Allow list of emojis to react with. If an emoji is in this list, the companion will react with it.
+# Enter as one string, wrapped in quotes, no spaces or commas. Ex: "🐱🦁🐯🐈"
 EMOJI_ALLOW_LIST=""
 
-# Block list of emojis to react with. If both an allow list and a block list are set, the allow list will take precedence.
-# Enter as one string, no spaces or commas. Ex: "👍👎🤩🫠🤠"
+# Block list of emojis to react with. If an emoji is in this list, it will not be used for reactions.
+# If both an allow list and a block list are set, the allow list will take precedence - the ban list will be ignored.
+# Enter as one string, wrapped in quotes, no spaces or commas. Ex: "🐶🐕🦮🐕‍🦺"
 EMOJI_BAN_LIST=""
 
 # Infinite loop prevention: Your companion tracks how many messages they've received from another companion within
