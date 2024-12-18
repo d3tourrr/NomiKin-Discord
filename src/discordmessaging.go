@@ -161,7 +161,7 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
                     companion.VerboseLog("RandEmojis: %v (%v/%v)", randEmojis, len(randEmojis), len(eligibleEmojis))
                 }
 
-                companion.VerboseLog("Adding reactions to message: %v", randEmojis)
+                companion.Log("Adding reactions to message from %v: %v", m.Author.ID, randEmojis)
                 for _, emoji := range randEmojis {
                     err := companion.DiscordSession.MessageReactionAdd(m.ChannelID, m.ID, emoji)
                     if err != nil {

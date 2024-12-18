@@ -233,6 +233,15 @@ When the maximum companion response threshold is reached, it is immediately rese
 
 I'm adding new features to this integration with some frequency. To get the latest updates, run `git pull` in the directory you cloned in the above steps. Then, follow the setup steps to build and run the docker container again.
 
+Most users should be able to follow these steps to update. If you've made changes to the Dockerfile or the `start-linux-companion.sh` or `start-windows-companion.ps1` scripts, you may need to resolve conflicts when you pull the latest changes.
+
+1. `git pull` - Retrieve the latest code.
+1. Edit `.env` files if necessary to include new settings.
+1. Run `./start-linux-companion.sh` or `./start-windows-companion.ps1` to build and run the updated Docker container.
+
+> [!NOTE]
+> If you ran the Docker commands manually when you setup your integration the first time, you'll probably need to run them manually again since your container and image name are likely different than those used in the helper scripts.
+
 # Interacting in Discord with your companion
 
 This integration is setup so that your companion will see messages where they are pinged (including replies to messages your companion's posts). Discord messages sent to companions are sent with a user configurable prefix to help your companion tell the difference between messages you send them in the Nomi app and messages that are sent to them from Discord. They look something like this.
