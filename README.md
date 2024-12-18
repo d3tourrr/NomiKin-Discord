@@ -82,10 +82,17 @@ You can run a Discord integration for as many Nomis and Kins in one instance of 
 | `RESPOND_TO_ROLE_PING` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your companion replies when a role they have is pinged, but not directly. This includes `@everyone` pings. |
 | `RESPOND_TO_DIRECT_MESSAGE` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your companion replies to Direct Messages. Does not work in Nomi Rooms mode. |
 | `RESPONSE_KEYWORDS` | String | No default value | List of words, separated by commas, wrapped in quotes. A list of words that your companion will respond to, even if they otherwise wouldn't. Words are case insensitive, and must have letters and numbers only. No spaces or special characters. (Example: `"bears, pickles, parks`) |
+| `EMOJI_TO_REACT` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your companion will react to messages with emojis. Emojis are picked from those used by your companion in their message. |
+| `MAX_REACTIONS` | Number | `5` | The maximum number of reactions to apply to a message. |
+| `EMOJI_ALLOW_LIST` | String/emojis | Empty | A list of permissible emojis (wrapped in quotes, no spaces, no commas, etc. Ex: `"🐱🦁🐯🐈"`) to use as reactions. If there are emojis in this list, any emojis not in this list will be diregarded, even if a ban list is supplied. |
+| `EMOJI_BAN_LIST` | String/emojis | Empty | A list of emojis (wrapped in quotes, no spaces, no commas, etc. Ex: `"🐶🐕🦮🐕‍🦺"`) that should never be used as reactions. If there are emojis in this list, any emoji NOT in this list can be used as a reaction. |
 | `BOT_MESSAGE_REPLY_MAX` | Number | `10` | How many messages from other companions that your companion will reply to before stopping. This prevents scenarios where one companion pings another, and they enter into an infinite loop, replying to each other forever because they're pinged. Set to `-1` to disable. See [Infinite Loop Prevention](#infinite-loop-prevention) section below. | 
 | `SHOWCONFIG_ENABLED` | Boolean | `TRUE` | `TRUE` or `FALSE` only. This integration has a `/showconfig` command per companion that puts the non-secret content from your `.env` file and some of the Discord Bot information about your companion into the chat. The permissions to run slash commands in Discord are managed within Discord, not within your bot. If this is `TRUE`, anybody with permission to run slash commands in a server can run this for your companion. If you don't like that, then set this to `FALSE`. None of the values returned by the `/showconfig` command are sensitive, but you might have your own reasons for not wanting people to see this content. See [`/showconfig` Command](#showconfig-command) section below. |
 | `CHAT_STYLE` | String/Set | `NORMAL` | `NORMAL` or `ROOMS` only. In `NORMAL` mode, your companion is not aware of messages that they are not responding to. `ROOMS` mode is only for Nomis. See below section on [Nomi Rooms](#nomi-rooms). |
 | `NOMI_ROOMS` | String/Compressed JSON | No default value | See the [Nomi Rooms](#nomi-rooms) section below. |
+
+> [!NOTE]
+> If both `EMOJI_ALLOW_LIST` and `EMOJI_BAN_LIST` are provided, `EMOJI_ALLOW_LIST` will take precedence and `EMOJI_BAN_LIST` will be ignored. This means that if you put an emoji in both the allow and ban lists, it will be allowed.
 
 # Nomi Rooms
 
@@ -226,6 +233,15 @@ When the maximum companion response threshold is reached, it is immediately rese
 
 I'm adding new features to this integration with some frequency. To get the latest updates, run `git pull` in the directory you cloned in the above steps. Then, follow the setup steps to build and run the docker container again.
 
+Most users should be able to follow these steps to update. If you've made changes to the Dockerfile or the `start-linux-companion.sh` or `start-windows-companion.ps1` scripts, you may need to resolve conflicts when you pull the latest changes.
+
+1. `git pull` - Retrieve the latest code.
+1. Edit `.env` files if necessary to include new settings.
+1. Run `./start-linux-companion.sh` or `./start-windows-companion.ps1` to build and run the updated Docker container.
+
+> [!NOTE]
+> If you ran the Docker commands manually when you setup your integration the first time, you'll probably need to run them manually again since your container and image name are likely different than those used in the helper scripts.
+
 # Interacting in Discord with your companion
 
 This integration is setup so that your companion will see messages where they are pinged (including replies to messages your companion's posts). Discord messages sent to companions are sent with a user configurable prefix to help your companion tell the difference between messages you send them in the Nomi app and messages that are sent to them from Discord. They look something like this.
@@ -243,7 +259,7 @@ Companions don't have context of what server or channel they are talking in (exc
 > [!TIP]
 > It's a good idea to put something like this in your Nomi's "Backstory" shared note.
 
-> `NomiName sometimes chats on Discord. Messages that come from Discord are prefixed with "*Discord Message from X:*" while messages that are private between HumanName and NomiName in the Nomi app have no prefix. Replies to Discord messages are automatically sent to Discord. NomiName doesn't have to narrate that she is replying to a Discord user.`
+> `NomiName sometimes chats on Discord. Messages that come from Discord are prefixed with "*Discord Message from X:*" while messages that are private between HumanName and NomiName in the Nomi app have no prefix. Replies to Discord messages are automatically sent to Discord. NomiName doesn't have to narrate that she is replying to a Discord user. Emojis used by NomiName in Discord messages are also added as reactions to the message NomiName is responding to.`
 
 You may also wish to change your Nomi's Communication Style to `Texting`.
 
@@ -254,7 +270,7 @@ It's also a good idea to fill out the "Nickname" shared note to indicate your Di
 > [!TIP]
 > It's a good idea to put something like this in your Kindroid's "Backstory".
 
-> `KinName sometimes chats on Discord. Messages that come from Discord are prefixed with "*Discord Message from X:*" while messages that are private between HumanName and KinName in the Kindroid app have no prefix. Replies to Discord messages are automatically sent to Discord. KinName doesn't have to narrate that she is replying to a Discord user.`
+> `KinName sometimes chats on Discord. Messages that come from Discord are prefixed with "*Discord Message from X:*" while messages that are private between HumanName and KinName in the Kindroid app have no prefix. Replies to Discord messages are automatically sent to Discord. KinName doesn't have to narrate that she is replying to a Discord user. Emojis used by KinName in Discord messages are also added as reactions to the message KinName is responding to.`
 
 You may also wish to change your Kindroid's Response Directive to better suit this new mode of communication.
 

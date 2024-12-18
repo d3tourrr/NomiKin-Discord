@@ -141,6 +141,38 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
             }
         }
 
+        // Parse out emojis to use as reactions to the original message
+        if companion.EmojisToReact {
+            companion.VerboseLog("EmojisToReact enabled. Adding reactions to message from %v", m.Author.ID)
+            eligibleEmojis := companion.GetEligibleEmojis(companionReply)
+            randEmojis := make([]string, companion.MaxReactions)
+
+            if len(eligibleEmojis) > 0 {
+                companion.VerboseLog("Eligible Emojis: %v", eligibleEmojis)
+                if companion.MaxReactions >= len(eligibleEmojis) {
+                    randEmojis = eligibleEmojis
+                } else {
+                    for i := len(eligibleEmojis) - 1; i > 0; i-- {
+                        j := rand.Intn(i + 1)
+                        eligibleEmojis[i], eligibleEmojis[j] = eligibleEmojis[j], eligibleEmojis[i]
+                    }
+
+                    randEmojis = eligibleEmojis[:companion.MaxReactions]
+                    companion.VerboseLog("RandEmojis: %v (%v/%v)", randEmojis, len(randEmojis), len(eligibleEmojis))
+                }
+
+                companion.Log("Adding reactions to message from %v: %v", m.Author.ID, randEmojis)
+                for _, emoji := range randEmojis {
+                    err := companion.DiscordSession.MessageReactionAdd(m.ChannelID, m.ID, emoji)
+                    if err != nil {
+                        companion.Log("Error adding reaction to message: %v", err)
+                    }
+                }
+            } else {
+                companion.VerboseLog("No eligible emojis found")
+            }
+        }
+
         return nil
     }
 

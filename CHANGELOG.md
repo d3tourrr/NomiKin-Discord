@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.2
+
+* Feature: Emojis contained in a companion message are now applied as reactions to the message they are responding to. This comes with several new configuration points in the `.env` file.
+  * `EMOJI_TO_REACT` - `TRUE` or `FALSE` - whether or not to react with emojis. Default is `TRUE`.
+  * `MAX_REACTIONS` - The maximum number of reactions to apply to a message. Default is `5`.
+  * `EMOJI_ALLOW_LIST` - A list of permissible emojis (wrapped in quotes, no spaces, no commas, etc. Ex: `"🐱🦁🐯🐈"`) to use as reactions. If there are emojis in this list, any emojis not in this list will be diregarded.
+  * `EMOJI_BAN_LIST` - A list of emojis (wrapped in quotes, no spaces, no commas, etc. Ex: `"🐶🐕🦮🐕‍🦺"`) that should never be used as reactions. If there are emojis in this list, any emoji NOT in this list can be used as a reaction.
+  * If both `EMOJI_ALLOW_LIST` and `EMOJI_BAN_LIST` are provided, `EMOJI_ALLOW_LIST` will take precedence and `EMOJI_BAN_LIST` will be ignored.
+* Bugfix: Companions set to respond to DMs would not. Now, they do.
+
 ## 0.8.1
 
 > [!WARNING]
