@@ -66,6 +66,13 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     },
                 })
             } else {
+                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+                    Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+                    Data: &discordgo.InteractionResponseData{
+                        Content: "Fetching configuration details...",
+                    },
+                })
+
                 avatarUrl := fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.png", s.State.User.ID, s.State.User.Avatar)
                 color, err := GetPrimaryColorFromImage(avatarUrl)
                 if err != nil {
@@ -104,11 +111,8 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-                    Type: discordgo.InteractionResponseChannelMessageWithSource,
-                    Data: &discordgo.InteractionResponseData{
-                        Embeds: []*discordgo.MessageEmbed{embed},
-                    },
+                _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+                    Embeds: []*discordgo.MessageEmbed{embed},
                 })
 
                 // Companion info
@@ -136,11 +140,8 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-                    Type: discordgo.InteractionResponseChannelMessageWithSource,
-                    Data: &discordgo.InteractionResponseData{
-                        Embeds: []*discordgo.MessageEmbed{embed},
-                    },
+                _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+                    Embeds: []*discordgo.MessageEmbed{embed},
                 })
 
                 // Response triggers
@@ -178,11 +179,8 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-                    Type: discordgo.InteractionResponseChannelMessageWithSource,
-                    Data: &discordgo.InteractionResponseData{
-                        Embeds: []*discordgo.MessageEmbed{embed},
-                    },
+                _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+                    Embeds: []*discordgo.MessageEmbed{embed},
                 })
 
                 // Emoji to reactions
@@ -215,11 +213,8 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-                    Type: discordgo.InteractionResponseChannelMessageWithSource,
-                    Data: &discordgo.InteractionResponseData{
-                        Embeds: []*discordgo.MessageEmbed{embed},
-                    },
+                _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+                    Embeds: []*discordgo.MessageEmbed{embed},
                 })
 
                 // Chat style
@@ -242,11 +237,8 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-                    Type: discordgo.InteractionResponseChannelMessageWithSource,
-                    Data: &discordgo.InteractionResponseData{
-                        Embeds: []*discordgo.MessageEmbed{embed},
-                    },
+                _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+                    Embeds: []*discordgo.MessageEmbed{embed},
                 })
             }
 
