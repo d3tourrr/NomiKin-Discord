@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.3
+
+* Feature: Log messages now include the name of the bot that generated them, not just the ID
+
 ## 0.8.2
 
 * Feature: Emojis contained in a companion message are now applied as reactions to the message they are responding to. This comes with several new configuration points in the `.env` file.

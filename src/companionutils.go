@@ -209,8 +209,8 @@ func (c *Companion) Log(s string, args ...interface{}) {
         }
     }
 
-    cBit := "[" + c.CompanionId + "]"
-    cPad := LogWidth - len(cBit) + 3
+    cBit := "[" + c.CompanionId + " | " + c.CompanionName + "]"
+    cPad := LogWidth - len(cBit) + 6
     if cPad < 0 {
         cPad = 0
     }

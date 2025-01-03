@@ -14,6 +14,7 @@ import (
 )
 
 type Companion struct {
+    CompanionName   string
     DiscordBotToken string
     CompanionToken  string
     CompanionId     string
@@ -175,6 +176,8 @@ func (c *Companion) Setup(envFile string) {
         c.ShowConfigEnabled = true
     }
 
+    c.CompanionName = c.DiscordSession.State.User.Username
+
     c.NomiKin = NomiKin.NomiKin{
         ApiKey: c.CompanionToken,
         CompanionId: c.CompanionId,
@@ -227,8 +230,8 @@ func (c *Companion) Setup(envFile string) {
         PrintStructFields(c)
     }
 
-    if len(c.CompanionId) > LogWidth {
-        LogWidth = len(c.CompanionId)
+    if len(c.CompanionId) + len(c.CompanionName) > LogWidth {
+        LogWidth = len(c.CompanionId) + len(c.CompanionName)
     }
 }
 
@@ -263,7 +266,7 @@ func (c *Companion) RunDiscordBot() error {
 
     c.RegisterSlashCommands(dg)
 
-    c.Log("Assigning companion to bot %v", dg.State.User.ID)
+    c.Log("Assigning companion [%v | %v] to bot %v", c.CompanionId, c.CompanionName, dg.State.User.ID)
     Companions[dg] = c
 
     UpdateStatus(dg)
