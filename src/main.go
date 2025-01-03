@@ -46,9 +46,6 @@ func main() {
             if err != nil {
                 log.Printf("Error running bot for companion %s: %v\n", c.CompanionId, err)
             }
-
-            c.CompanionName = c.DiscordSession.State.User.Username
-
         }(companion)
     }
 

@@ -264,6 +264,7 @@ func (c *Companion) RunDiscordBot() error {
 
     c.RegisterSlashCommands(dg)
 
+    c.CompanionName = dg.State.User.Username
     c.Log("Assigning companion [%v | %v] to bot %v", c.CompanionId, c.CompanionName, dg.State.User.ID)
     Companions[dg] = c
 
