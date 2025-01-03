@@ -176,8 +176,6 @@ func (c *Companion) Setup(envFile string) {
         c.ShowConfigEnabled = true
     }
 
-    c.CompanionName = c.DiscordSession.State.User.Username
-
     c.NomiKin = NomiKin.NomiKin{
         ApiKey: c.CompanionToken,
         CompanionId: c.CompanionId,
