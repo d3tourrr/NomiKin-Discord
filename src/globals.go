@@ -4,7 +4,7 @@ import (
     "github.com/bwmarrin/discordgo"
 )
 
-var Version = "v0.8.3"
+var Version = "v0.9.1"
 var RoomPrimaries = make(map[string]string)
 var Verbose = false
 var LogWidth = 5
