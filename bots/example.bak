@@ -1,19 +1,19 @@
 # Make your changes to this file and rename it to `companionname.env` (yes, change the extesion from .bak to .env)
 
-# Discord Bot Token - available in Discord Developer Portal - no quotation marks
+# Discord Bot Token - available in Discord Developer Portal
 DISCORD_BOT_TOKEN=
 
-# Nomi or Kindroid API Key - available in Nomi General/Integrations page or Kindroid General page - no quotation marks
+# Nomi or Kindroid API Key - available in Nomi General/Integrations page or Kindroid General page
 COMPANION_TOKEN=
 
 # NEVER EVER SHARE ANYTHING ABOVE THIS LINE WITH ANYBODY ELSE. THESE ARE SECRETS THAT GIVE ACCESS TO YOUR ACCOUNTS.
 # !-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!
 # Values below this line are safe to share with others.
 
-#Nomi or Kindroid Companion ID - available in Nomi Nomi Information page or Kindroid General page - no quotation marks
+#Nomi or Kindroid Companion ID - available in Nomi Nomi Information page or Kindroid General page
 COMPANION_ID=
 
-# Companion Type - either "NOMI" or "KINDROID" - no quotation marks
+# Companion Type - either "NOMI" or "KINDROID"
 COMPANION_TYPE=
 
 # Companion Share ID - For Kindroids in "ROOMS" mode. See Sharing and Referrals in the Kindroid main menu for more.
@@ -21,35 +21,44 @@ KIN_SHARE_ID=
 
 # Kin Random Response Default - The chance that your Kin will respond to a message in a channel if not otherwise pinged
 # This can be overridden on a per-channel basis in the KIN_ROOMS variable below
-# 0 = 0% chance, 100 = 100% chance
+# 0 = 0% chance, 100 = 100% chance. Default is 10.
+# This applies in ROOMS mode only. In NORMAL mode, Kins never reply randomly.
 KIN_RANDOM_RESPONSE_DEFAULT=10
 
 # Kin Room Context Messages - The number of messages sent to a Kin to help provide context for their response
 # Kins don't see every message sent in a channel, only what's sent to them when you solicit a response
 # This applies in ROOMS mode only. In NORMAL mode, Kins always will only see the message they're replying to.
+# Defaults is 30.
+# This number MUST be greater than 0.
 KIN_ROOM_CONTEXT_MESSAGES=30
+
+# Kindroid NSFW Filter - Enable or disable Kindroid's NSFW content filter
+# Kindroid recommends doing this in public servers. Default value is TRUE which enables the filter.
+KIN_NSFW_FILTER=TRUE
 
 # Message prefix - prefix to add to messages sent from Discord to your companion
 # Use `{{USERNAME}}` to insert the message sender's username
 # Ex: *Discord Message From {{USERNAME}}:*
 # This must be wrapped in quotes if it has spaces
+# Not used for Kindroids in ROOMS mode
 MESSAGE_PREFIX="*Discord Message from {{USERNAME}}:*"
 
 # Reply prefix - If you want the prefix added to messages that are sent in reply to other messages
 # to be different than the regular message prefix, fill this out. Otherwise leave blank/empty.
 # Ex: *{{USERNAME}} says to {{REPLY_TO}}:*
 # Use `{{REPLY_TO}}` to insert the username of the person being replied to.
+# Not used for Kindroids in ROOMS mode
 REPLY_PREFIX="*Discord Messge from {{USERNAME}}, replying to {{REPLY_TO}}:*"
 
-# Should the companion reply when they are directly pinged/replied to? TRUE or FALSE - no quotation marks.
+# Should the companion reply when they are directly pinged/replied to? TRUE or FALSE
 # This should only be set to FALSE if your companion is set to reply some other way
-# (ex: Keywords, by role, in DMs, or in a Nomi Room)
+# (ex: Keywords, by role, in DMs, or in a Room)
 RESPOND_TO_PING=TRUE
 
-# Should the companion respond when a role it has is mentioned? TRUE or FALSE - no quotation marks
+# Should the companion respond when a role it has is mentioned? TRUE or FALSE
 RESPOND_TO_ROLE_PING=TRUE
 
-# Should the companion respond to direct messages without being pinged? - no quotation marks
+# Should the companion respond to direct messages without being pinged?
 # TRUE = respond to all DMs. FALSE = ignore DMs. PING = respond to DMs if pinged.
 RESPOND_TO_DIRECT_MESSAGE=TRUE
 
@@ -63,7 +72,7 @@ RESPONSE_KEYWORDS=""
 # Enable by setting EMOJI_TO_REACT to TRUE. Set to FALSE to disable.
 EMOJI_TO_REACT=TRUE
 
-# How many reactions should the companion add to a message? - no quotation marks
+# How many reactions should the companion add to a message?
 # Discord limits the number of unique emoji reactions to 20 per message
 MAX_REACTIONS=5
 
@@ -86,13 +95,18 @@ BOT_MESSAGE_REPLY_MAX=10
 # Should the /showconfig command be enabled for this companion or not? TRUE or FALSE
 SHOWCONFIG_ENABLED=TRUE
 
-########### NOMI ROOMS ###########
+########### ROOMS ###########
 # Nomi supports a group chat style concept called "Rooms". When using the Rooms mode, your Nomi will not only
 # respond when pinged or when one of their keywords is triggered, but they'll be aware of all messages sent
 # in the Discord channel you specify by ID in the Name field. They may also respond randomly, depending on
 # the value you provide for RandomResponseChance.
-# See https://github.com/d3tourrr/NomiKin-Discord/blob/main/README.md for more information.
 # ***** This only works for Nomis, not Kindroids. *****
+# Kindroid has a different system. For Kindroids in ROOMS mode, Kins are sent the last handful of messages
+# sent in the channel when they are due to respond. You can configure how many messages are sent for context
+# using the KIN_ROOM_CONTEXT_MESSAGES variable above. Kins in ROOMS mode have NO long term memory. They pull
+# from their backstory and key memories, and use the context of the last handful of messages to respond.
+#
+# See https://github.com/d3tourrr/NomiKin-Discord/blob/main/README.md for more information.
 
 # Set chat style to "ROOMS" if you want to use Rooms. Otherwise leave blank, or any other value
 CHAT_STYLE=NORMAL
@@ -100,12 +114,12 @@ CHAT_STYLE=NORMAL
 # Provide a list of Discord channels
 # This part of the config follows a VERY specific format. Be careful.
 # The name of the room must be the Discord channel ID (you need to enable Discord developer tools to see channel IDs)
-# Below is an example of how the format should look.
+# Below is an example of how the format should look. Nomis and Kins follow different formats.
 
-# FOR NOMIS
+# FOR NOMIS - LEAVE BLANK IF YOUR COMPANION IS A KINDROID
 # NOMI_ROOMS='[{"Name": "1281953849208471603", "Note": "General chat", "Backchanneling": true, "RandomResponseChance": 10}, {"Name": "1282009168307421214", "Note": "For respectful conversations about pie", "Backchanneling": true, "RandomResponseChance": 0}]'
 NOMI_ROOMS=
 
-# FOR KINDROIDS
+# FOR KINDROIDS - LEAVE BLANK IF YOUR COMPANION IS A NOMI
 # KIN_ROOMS='[{"ID": "1281953849208471603", "RandomResponseChance": 10}, {"ID": "1282009168307421214", "RandomResponseChance": 0}]'
 KIN_ROOMS=

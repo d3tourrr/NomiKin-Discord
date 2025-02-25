@@ -140,7 +140,7 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
 
                 conversation, err := companion.GetConversation(m)
                 
-                companion.VerboseLog("Sending:\nShareID: %v\nReq: %v\nConversation Count: %v", companion.KinShareId, req, len(*conversation))
+                companion.VerboseLog("Sending: ShareID: %v | Req: %v | Conversation Count: %v | Last Msg: ", companion.KinShareId, &req, len(*conversation), (*conversation)[0].Text)
                 companionReply, err = companion.NomiKin.SendKindroidDiscordBot(&companion.KinShareId, &nsfwFilter, &req, *conversation)
                 if err != nil {
                     companion.Log("Error sending message to Kindroid: %v", err)

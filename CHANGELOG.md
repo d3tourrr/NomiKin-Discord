@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1
+* Feature: "Rooms" mode for Kindroids
+  * Kindroids can now be configured to respond to messages in a channel randomly, rather than just when pinged.
+  * This is done by setting the `CHAT_STYLE` variable in your `.env` file to `ROOMS` for Kindroids.
+  * Kindroids in `ROOMS` mode have no long term memory. They pull from their backstory, key memories, and the last `KIN_ROOM_CONTEXT_MESSAGES` number of messages sent in the channel to generate a response.
+  * See [README.md](./README.md) for more information on how to set this up.
+
 ## 0.8.3
 
 * Feature: Log messages now include the name of the bot that generated them, not just the ID

@@ -262,12 +262,12 @@ func (c *Companion) GetConversation(m *discordgo.MessageCreate) (*[]NomiKin.KinC
     }
 
     for _, message := range messages {
-        if message.Author.ID == c.DiscordSession.State.User.ID {
-            return &conversation, nil
-        }
-
         msgContent := message.ContentWithMentionsReplaced()
-        conversation = append(conversation, c.NomiKin.NewConversationItem(message.Author.Username, msgContent, message.Timestamp.Format(time.RFC3339)))
+        conversation = append(conversation, NomiKin.KinConversation{
+            Username: message.Author.Username,
+            Text: msgContent,
+            Timestamp: message.Timestamp.Format(time.RFC3339),
+        })
     }
 
     return &conversation, nil

@@ -76,6 +76,10 @@ You can run a Discord integration for as many Nomis and Kins in one instance of 
 | `COMPANION_TOKEN` | String/**SECRET** | No default value | The token you get from the Nomi or Kindroid app that's specific to your account (not unique per companion). **Do not share this token with anyone, ever.** |
 | `COMPANION_ID` | String/Unique Identifier | No default value | Uniquely identifies the Nomi or Kindroid that you're bringing into Discord. Available in the Nomi or Kindroid apps, described in the Setup steps above. |
 | `COMPANION_TYPE` | String/Set | No default value | Must be either `NOMI` or `KINDROID`, specify which platform your companion is on. |
+| `KIN_SHARE_ID` | String | No default value | The **share ID** of your Kindroid. This is required in `ROOMS` mode for Kins. See [the Kindroid docs on sharing Kins for more](https://docs.kindroid.ai/sharing-kindroids-and-referrals). |
+| `KIN_RANDOM_RESPONSE_DEFAULT` | Number | `10` | The default percentage chance (out of 100) that your Kindroid will respond to a message even if they wouldn't normally respond. This is only used in `ROOMS` mode and only if your companion is a Kindroid. **In public servers, or servers with a lot of activity, you likely want to set this value to `0` and then override it for specific channels using the `KIN_ROOMS` setting.** Kins can randomly respond to messages in any channel they have access to on Discord. |
+| `KIN_ROOM_CONTEXT_MESSAGES` | Number | `30` | The number of messages that your Kindroid will receive for context in `ROOMS` mode. Kins in `ROOMS` mode have no memory other than their backstory and key memories. This is the number of messages that will be sent to your Kindroid for context when they are in a room. **This number must be greater than 0.** |
+| `KIN_NSFW_FILTER` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your Kindroid will filter out NSFW content in `ROOMS` mode. This is recommended for public servers. |
 | `MESSAGE_PREFIX` | String | `*Discord Message from {{USERNAME}}:*` | Text that gets appended to every message that is sent to your companion. This is super helpful if you're not the only one communicating with your companion (like if they're in a server with other people, not just you), so they can tell who's sending a message. The `{{USERNAME}}` keyword is a variable you can move around, and is replaced with a message sender's username when a message goes to your companion. If you don't include the `{{USERNAME}}` variable, then your companion will have no way of telling who sent them a message, and will assume they all came from you. See [Interacting With Your Companion](#interacting-in-discord-with-your-companion) section below. |
 | `REPLY_PREFIX` | String | `*Discord Message from {{USERNAME}}, replying to {{REPLY_TO}}:*` | Similar to `MESSAGE_PREFIX`, but used when the incoming message is a reply to another message. If a message isn't a reply, or if `REPLY_PREFIX` is not specified, the `MESSAGE_PREFIX` will be used. `REPLY_PREFIX` supports the `{{USERNAME}}` variable, and another called `{{REPLY_TO}}` which becomes the username of the author of the message that's being replied to.
 | `RESPOND_TO_PING` | Boolean | `TRUE` | `TRUE` or `FALSE` only. Whether or not your companion replies when they are pinged, or one of their messages is replied to. |
@@ -89,19 +93,23 @@ You can run a Discord integration for as many Nomis and Kins in one instance of 
 | `BOT_MESSAGE_REPLY_MAX` | Number | `10` | How many messages from other companions that your companion will reply to before stopping. This prevents scenarios where one companion pings another, and they enter into an infinite loop, replying to each other forever because they're pinged. Set to `-1` to disable. See [Infinite Loop Prevention](#infinite-loop-prevention) section below. | 
 | `SHOWCONFIG_ENABLED` | Boolean | `TRUE` | `TRUE` or `FALSE` only. This integration has a `/showconfig` command per companion that puts the non-secret content from your `.env` file and some of the Discord Bot information about your companion into the chat. The permissions to run slash commands in Discord are managed within Discord, not within your bot. If this is `TRUE`, anybody with permission to run slash commands in a server can run this for your companion. If you don't like that, then set this to `FALSE`. None of the values returned by the `/showconfig` command are sensitive, but you might have your own reasons for not wanting people to see this content. See [`/showconfig` Command](#showconfig-command) section below. |
 | `CHAT_STYLE` | String/Set | `NORMAL` | `NORMAL` or `ROOMS` only. In `NORMAL` mode, your companion is not aware of messages that they are not responding to. `ROOMS` mode is only for Nomis. See below section on [Nomi Rooms](#nomi-rooms). |
-| `NOMI_ROOMS` | String/Compressed JSON | No default value | See the [Nomi Rooms](#nomi-rooms) section below. |
+| `NOMI_ROOMS` | String/Compressed JSON | No default value | See the [Nomi Rooms](#nomi-rooms) section below. Leave blank if your companion is a Kindroid in `ROOMS` mode. |
+| `KIN_ROOMS` | String/Compressed JSON | No default value | See the [Kin Rooms](#kin-rooms) section below. Leave blank if your companion is a Nomi in `ROOMS` mode. |
 
 > [!NOTE]
 > If both `EMOJI_ALLOW_LIST` and `EMOJI_BAN_LIST` are provided, `EMOJI_ALLOW_LIST` will take precedence and `EMOJI_BAN_LIST` will be ignored. This means that if you put an emoji in both the allow and ban lists, it will be allowed.
 
-# Nomi Rooms
+# Rooms
+Both Nomi and Kindroid offer a way of interacting with your companions that I refer to as `ROOMS` mode in this integration. It works differently for Nomis vs Kins.
 
-Nomi.ai has a feature called "Rooms" which function like a group chat. Your Nomi will be aware of all the messages sent in a specified Discord channel, but still only respond when they normally would (when they are pinged, or when one of their keywords is used) or by a configurable random chance. Kindroid does not have this feature at this time.
+## Nomi Rooms
+
+Nomi.ai has a feature called "Rooms" which function like a group chat. Your Nomi will be aware of all the messages sent in a specified Discord channel, but still only respond when they normally would (when they are pinged, or when one of their keywords is used) or by a configurable random chance. Kindroid has a different feature where your Kin can reply in any channel, but it's only aware of a collection of messages sent for context when it responds.
 
 > [!WARNING]
 > When in Rooms mode, your Nomi will ignore all messages that occur in a Discord channel that they do not have a corresponding Room for. That means that even if your Nomi has permissions on Discord to see a certain channel, and you ping them in that channel, if you haven't setup that Channel as a Room (details on how to do that below), your Nomi will ignore that ping. This means your Nomi will also ignore DMs when in Rooms mode, regardless of the setting you choose for `RESPOND_TO_DIRECT_MESSAGE` in your `.env` file.
 
-To setup Rooms functionality, take a look at the updated `.env.example` file. There are two new settings to be aware of.
+To setup Rooms functionality, take a look at the updated `example.bak` file. There are two new settings to be aware of.
 
 1. `CHAT_STYLE` - To use the Rooms functionality, change this to `ROOMS`. Any other setting, including the default of `NORMAL` will cause your Nomi to behave as it otherwise would - only seeing messages where it is pinged, and responding to them all.
 1. `NOMI_ROOMS` - This is a single line JSON string that describes the different rooms your Nomi will participate in. It follows a *very* specific format, described below.
@@ -143,31 +151,74 @@ It becomes a little easier to see now that this example specifies two Rooms, and
 
 When starting up this integration, if the room already exists, your Nomi will be added to it if it's not already included.
 
+## Kin Rooms
+
+Kindroid.ai offers an API endpoint that allows you to send a collection of messages to your Kin to give them context of the conversation that's occurring when they reply. Your Kin still replies as it normally would, when it's pinged or by random response chance, etc., but it is not aware of *every* message sent in a Discord channel. Your Kin can, however, reply in **every channel it has access to**. This is different from Nomi Rooms, where the Nomi is only aware of messages sent in a channel that it has a corresponding room for.
+
+> [!WARNING]
+> When in Rooms mode, your Kin will be able to respond to all messages in any channel it has access to. If you want your Kin to only respond in certain channels, you must configure your Discord permissions accordingly. In this kind of situation, it's a good idea to set `KIN_RANDOM_RESPONSE_DEFAULT` to `0` so that your Kin will only respond when pinged or one of its keywords is used. You can override this on a per-channel basis using the `RandomResponseChance` field in your `KIN_ROOMS` list in your `.env` file.
+
+To use this functionality, set `CHAT_STYLE` to `ROOMS` and populate the `KIN_ROOMS` variable in your `.env` file. There are several other settings to be aware of, mentioned in the [#.env File Fields](#env-file-fields) section above.
+
+1. `CHAT_STYLE` - To use the Rooms functionality, change this to `ROOMS`. Any other setting, including the default of `NORMAL` will cause your Kin to behave as it otherwise would - only seeing messages where it is pinged, and responding to them all.
+1. `KIN_ROOMS` - This is a single line JSON string that describes the different rooms your Kin will participate in. It follows a *very* specific format, described below.
+
+`KIN_ROOMS='[{"ID": "1281953849208471603", "RandomResponseChance": 10}, {"ID": "1282009168307421214", "RandomResponseChance": 0}]'`
+
+With proper JSON formatting (it needs to all be on one line and wrapped in quotes in your `.env` file, this is just for discussion purposes), it becomes a bit easier to read.
+
+```json
+[
+   {
+      "ID": "1281953849208471603",
+      "RandomResponseChance": 10
+   },
+   {
+      "ID": "1282009168307421214",
+      "RandomResponseChance": 0
+   }
+]
+```
+
+It becomes a little easier to see now that this example specifies two Rooms, and each has two properties: ID and RandomResponseChance.
+* **ID**: This is the Channel ID given by Discord. This part matters greatly.
+  * The ID you specify must be the Channel ID for a Discord Channel that your Kin will see.
+  * To get a Channel ID, you must enable Discord Developer Mode: [Instructions](https://discord.com/developers/docs/activities/building-an-activity#step-0-enable-developer-mode)
+  * After turning on Developer Mode, you can right click on a Discord channel and select "Copy Channel ID"
+  * **Only normal Discord channels work as Rooms.** Direct Messages, forum posts and threads are not supported at this time.
+* **RandomResponseChance**: This is a percentage chance (out of 100) that your Kin will respond in a given channel even if they would not respond normally. The higher this number, the more likely it will be that your Kin will respond to a message even if they wouldn't normally respond. This must be a whole number between 0 and 100. If set to 0, your Kin will never randomly respond to messages and will only respond when pinged or one of their keywords is used. If it is set to 100, they will respond to every single message posted in a channel. **BE CAREFUL WITH THIS SETTING!** (More details below.)
+
+> [!NOTE]
+> For channels that are not in your `KIN_ROOMS` list, your Kin will still respond according to how they're configured in your `.env` file. This means as long as they have permissions to the Discord channel where a message is sent, they will respond to it if they are pinged or according to their `KIN_RANDOM_RESPONSE_DEFAULT` value. The `KIN_ROOMS` section is only used to override the default random response chance (`KIN_RANDOM_RESPONSE_DEFAULT`) for specific channels.
+
+> [!WARNING]
+> Kindroids in `ROOMS` mode have **no memory** other than their backstory and key memories (which do not update as a result of chatting on Discord). Kins in `ROOMS` mode use the `KIN_ROOM_CONTEXT_MESSAGES` setting to determine how many messages to send to the Kin for context when they are replying to a message.
+
 ## Warning and Notes
 
 > [!WARNING]
-> Make sure in your `.env` file that the formatting for `NOMI_ROOMS` *exactly* follows the example, including being all on one line and how it is wrapped in quotes and other symbols.
+> Make sure in your `.env` file that the formatting for `NOMI_ROOMS` and `KIN_ROOMS` *exactly* follows the example, including being all on one line and how it is wrapped in quotes and other symbols.
 
 > [!WARNING]
-> Your Nomi will not see any messages sent to Discord channels that don't have a corresponding room configured. This includes pings, even if your Nomi has Discord permissions to see and send messages to a channel. This also includes DMs.
+> Nomis will not see any messages sent to Discord channels that don't have a corresponding room configured. This includes pings, even if your Nomi has Discord permissions to see and send messages to a channel. This also includes DMs. Kins on the other hand, will be able to respond to messages sent to any channel they have access to on Discord.
 
 > [!CAUTION]
-> In normal mode, messages sent to and from your Nomi are visible in the Nomi app. When using Rooms, this integration will log the messages, but they won't be visible in the Nomi app. There is no indication in the Nomi app that your Nomi is chatting in rooms. There is also no convenient way to manage which rooms your Nomi is in.
+> In normal mode, messages sent to and from your companion are visible in the companion app. When using Rooms, this integration will log the messages, but they won't be visible in the companion app. There is no indication in the companion app that your companion is chatting in rooms. For Nomis, there is also no convenient way to manage which rooms your Nomi is in. Kindroid doesn't have this problem since every time a Kin responds in `ROOMS` mode, an ephemeral instance of that Kin is created and deleted based on the `KIN_SHARE_ID` setting in your `.env` file.
 
 > [!CAUTION]
-> Be careful using rooms in particularly busy servers. The Nomi API takes time to process messages. This integration queues and throttles the messages that are sent to your Nomi, but it might get behind and lag if the channel your Nomi is watching is very active.
+> Be careful using rooms in particularly busy servers. The companion APIs take time to process messages. This integration queues and throttles the messages that are sent to your companion, but it might get behind and lag if the channel your companion is watching is very active.
 
 > [!NOTE]
-> Nomis cannot see images attached to messages, nor do they click links. In Discord, gifs are sent as a link to the gif and then the Discord client intelligently displays the gif instead of just the link. Nomis just see the link, not the gif, although they can usually make a good guess at what the gif is about by the URL they see.
+> Companions cannot see images attached to messages, nor do they click links. In Discord, gifs are sent as a link to the gif and then the Discord client intelligently displays the gif instead of just the link. Companions just see the link, not the gif, although they can usually make a good guess at what the gif is about by the URL they see.
 
-### Additional Warning About `RandomResponseChance`
+## Additional Warning About `RandomResponseChance`
 
 > [!CAUTION]
-> The `RandomResponseChance` field in your `NOMI_ROOMS` list determines how often your Nomi will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If you do disable infinite reply prevention (details below), and your Nomi responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. It is very important to have infinite reply prevention set to a reasonable value when using `RandomResponseChance`.
+> The `RandomResponseChance` field in your `NOMI_ROOMS` or `KIN_ROOMS` (as well as `KIN_RANDOM_RESPONSE_DEFAULT` value) list determines how often your companion will respond to a message even if they wouldn't normally respond to it. **THIS CAN BE DANGEROUS!** If you do disable infinite reply prevention (details below), and your companion responds to another AI companion, they will respond to each other infinitely because all AI companions respond every time they are pinged. It is very important to have infinite reply prevention set to a reasonable value when using `RandomResponseChance`.
 
-`RandomResponseChance` applies to each message individually. What this means is that if you set `RandomResponseChance` to `50`, every message posted in a given channel there will be a 50% chance that the Nomi responds. It's entirely possible that a Nomi would respond to 5 messages in a row and then not respond to the next 10. It's not meant to be consistent, it's meant to make your Nomi's presence feel more organic in your Discord server.
+`RandomResponseChance` applies to each message individually. What this means is that if you set `RandomResponseChance` to `50`, every message posted in a given channel there will be a 50% chance that the companion responds. It's entirely possible that a companion would respond to 5 messages in a row and then not respond to the next 10. It's not meant to be consistent, it's meant to make your companion's presence feel more organic in your Discord server.
 
-Your Nomi does not decide when to respond. The chance of a response despite not being pinged is entirely left up to random chance, based on your provided value for `RandomResponseChance`.
+Your companion does not decide when to respond. The chance of a response despite not being pinged is entirely left up to random chance, based on your provided value for `RandomResponseChance`.
 
 # Running multiple companions at once
 

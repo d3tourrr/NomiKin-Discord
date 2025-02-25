@@ -21,6 +21,7 @@ type Companion struct {
     KinShareId      string
     KinRandomResponseDefault int
     KinRoomContextMessages int
+    KinNsfwFilter   bool
     CompanionType   string
     MessagePrefix   string
     ReplyPrefix     string
@@ -105,6 +106,11 @@ func (c *Companion) Setup(envFile string) {
             c.KinRoomContextMessages, err = strconv.Atoi(value)
             if err != nil {
                 log.Fatalf("KIN_ROOM_CONTEXT_MESSAGES must be set to a number. Set KIN_ROOM_CONTEXT_MESSAGES correctly in %v", envFile)
+            }
+        case "KIN_NSFW_FILTER":
+            c.KinNsfwFilter, err = strconv.ParseBool(value)
+            if err != nil {
+                log.Fatalf("KIN_NSFW_FILTER must be set to either TRUE or FALSE. Set KIN_NSFW_FILTER correctly in %v", envFile)
             }
         case "MESSAGE_PREFIX":
             c.MessagePrefix = value
@@ -201,6 +207,11 @@ func (c *Companion) Setup(envFile string) {
     if _, exists := envVars["KIN_RANDOM_RESPONSE_DEFAULT"]; !exists && c.CompanionType == "KINDROID" && c.ChatStyle == "ROOMS" {
         c.VerboseLog("KIN_RANDOM_RESPONSE_DEFAULT not present in config. Setting default value '10'.")
         c.KinRandomResponseDefault = 10
+    }
+
+    if _, exists := envVars["KIN_NSFW_FILTER"]; !exists && c.CompanionType == "KINDROID" && c.ChatStyle == "ROOMS" {
+        c.VerboseLog("KIN_NSFW_FILTER not present in config. Setting default value 'TRUE'.")
+        c.KinNsfwFilter = true
     }
 
     c.NomiKin = NomiKin.NomiKin{

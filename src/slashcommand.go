@@ -32,7 +32,7 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
             c.Log("Command 'showconfig' triggered [command enabled: %v]", c.ShowConfigEnabled)
             var embed *discordgo.MessageEmbed
             var err error
-            desc := "Bot Info: Version" + Version + " [NomiKin-Discord](https://github.com/d3tourrr/NomiKin-Discord) by <@498559262411456566>"
+            desc := "Bot Info: " + Version + " [NomiKin-Discord](https://github.com/d3tourrr/NomiKin-Discord) by <@498559262411456566>"
             var user *discordgo.User
             if i.Member != nil && i.Member.User != nil {
                 user = i.Member.User
@@ -140,6 +140,14 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
+                if c.CompanionType == "KINDROID" && c.ChatStyle == "ROOMS" {
+                    embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+                        Name: "Kin Room Info",
+                        Value: fmt.Sprintf("Share ID: %v\nRandom Response Default: %v\nContext Messages Sent: %v\nNSFW Filter: %v", c.KinShareId, c.KinRandomResponseDefault, c.KinRoomContextMessages, c.KinNsfwFilter),
+                        Inline: false,
+                    })
+                }
+
                 _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
                     Embeds: []*discordgo.MessageEmbed{embed},
                 })
@@ -228,13 +236,23 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                             Value: fmt.Sprintf("`%v`", c.ChatStyle),
                             Inline: false,
                         },
-                        {
-                            Name: "Nomi Rooms",
-                            Value: fmt.Sprintf("```\n%v\n```", c.Rooms),
-                            Inline: false,
-                        },
                     },
                     Footer: footer,
+                }
+
+                // only add c.Rooms if it's under 750 characters
+                if len(c.Rooms) < 750 {
+                    embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+                        Name: "Rooms JSON",
+                        Value: fmt.Sprintf("```json\n%v\n```", c.Rooms),
+                        Inline: false,
+                    })
+                } else {
+                    embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+                        Name: "Rooms JSON",
+                        Value: fmt.Sprintf("Rooms JSON is `%v` long which is too big to be attached. Check your `.env` file.", c.Rooms),
+                        Inline: false,
+                    })
                 }
 
                 _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
