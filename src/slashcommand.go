@@ -240,9 +240,9 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                // only add c.Rooms if it's under 350 characters
+                // only add c.Rooms if it's under 300 characters
                 roomValue := ""
-                if len(c.Rooms) < 350 {
+                if len(c.Rooms) < 300 {
                     roomValue = fmt.Sprintf("```json\n%v\n```", c.Rooms)
                 } else {
                     roomValue = fmt.Sprintf("Rooms JSON is `%v` long which is too big to be attached. Check your `.env` file.", c.Rooms)
