@@ -240,8 +240,8 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                // only add c.Rooms if it's under 750 characters
-                if len(c.Rooms) < 750 {
+                // only add c.Rooms if it's under 500 characters
+                if len(c.Rooms) < 500 {
                     embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
                         Name: "Rooms JSON",
                         Value: fmt.Sprintf("```json\n%v\n```", c.Rooms),
