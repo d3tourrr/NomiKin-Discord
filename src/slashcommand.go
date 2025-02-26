@@ -143,7 +143,7 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                 if c.CompanionType == "KINDROID" && c.ChatStyle == "ROOMS" {
                     embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
                         Name: "Kin Room Info",
-                        Value: fmt.Sprintf("Share ID: %v\nRandom Response Default: %v\nContext Messages Sent: %v\nNSFW Filter: %v", c.KinShareId, c.KinRandomResponseDefault, c.KinRoomContextMessages, c.KinNsfwFilter),
+                        Value: fmt.Sprintf("Share ID: `%v`\nRandom Response Default: `%v`\nContext Messages Sent: `%v`\nNSFW Filter: `%v`", c.KinShareId, c.KinRandomResponseDefault, c.KinRoomContextMessages, c.KinNsfwFilter),
                         Inline: false,
                     })
                 }

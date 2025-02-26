@@ -81,6 +81,9 @@ func (c *Companion) Setup(envFile string) {
         log.Fatalf("Error reading .env file: %v", err)
     }
 
+    nomiRoomString := ""
+    kinRoomString := ""
+
     for key, value := range envVars {
         switch key {
         case "DISCORD_BOT_TOKEN":
@@ -164,9 +167,9 @@ func (c *Companion) Setup(envFile string) {
                 c.ChatStyle = "NORMAL"
             }
         case "NOMI_ROOMS":
-            c.Rooms = strings.Trim(value, "'")
+            nomiRoomString = strings.Trim(value, "'")
         case "KIN_ROOMS":
-            c.Rooms = strings.Trim(value, "'")
+            kinRoomString = strings.Trim(value, "'")
         }
     }
 
@@ -226,14 +229,14 @@ func (c *Companion) Setup(envFile string) {
     })
 
     if c.ChatStyle == "ROOMS" {
-        roomsString := c.Rooms
         if c.CompanionType == "NOMI" {
-            if roomsString == "" {
+            if nomiRoomString == "" {
                 log.Fatalf("Nomi %v is in ROOMS mode but no rooms were provided.", c.CompanionId)
             }
 
+            c.Rooms = nomiRoomString
             var rooms []NomiRoom
-            if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
+            if err := json.Unmarshal([]byte(nomiRoomString), &rooms); err != nil {
                 log.Fatalf("Companion %v Error parsing NOMI_ROOMS: %v", c.CompanionId, err)
             }
 
@@ -258,11 +261,12 @@ func (c *Companion) Setup(envFile string) {
                 }
             }
         } else if c.CompanionType == "KINDROID" {
-            if roomsString == "" {
+            if kinRoomString == "" {
                 c.Log("Kindroid %v is in ROOMS mode but no rooms were provided. Every channel will use the default of %v%", c.CompanionId, c.KinRandomResponseDefault)
             } else {
+                c.Rooms = kinRoomString
                 var rooms []KinRoom
-                if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
+                if err := json.Unmarshal([]byte(kinRoomString), &rooms); err != nil {
                     log.Fatalf("Companion %v Error parsing KIN_ROOMS: %v", c.CompanionId, err)
                 }
 
