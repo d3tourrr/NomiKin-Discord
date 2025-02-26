@@ -240,12 +240,12 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                     Footer: footer,
                 }
 
-                // only add c.Rooms if it's under 300 characters
+                // only add c.Rooms if it's under 500 characters
                 roomValue := ""
-                if len(c.Rooms) < 300 {
+                if len(c.Rooms) < 500 {
                     roomValue = fmt.Sprintf("```json\n%v\n```", c.Rooms)
                 } else {
-                    roomValue = fmt.Sprintf("Rooms JSON is `%v` long which is too big to be attached. Check your `.env` file.", c.Rooms)
+                    roomValue = fmt.Sprintf("Rooms JSON is `%v` characters long which is too big to be attached. Check your `.env` file.", len(c.Rooms))
                 }
 
                 embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
