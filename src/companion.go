@@ -223,7 +223,10 @@ func (c *Companion) Setup(envFile string) {
     }
 
     c.Tracker = NewBotMessageTracker()
-    c.NomiKin.Init(c.CompanionType)
+
+    SuppressLogs(func() {
+        c.NomiKin.Init(c.CompanionType)
+    })
 
     if c.ChatStyle == "ROOMS" {
         if c.CompanionType == "NOMI" {
