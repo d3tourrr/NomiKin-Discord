@@ -241,19 +241,18 @@ func (c *Companion) HandleSlashCommands(s *discordgo.Session, i *discordgo.Inter
                 }
 
                 // only add c.Rooms if it's under 500 characters
+                roomValue := ""
                 if len(c.Rooms) < 500 {
-                    embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-                        Name: "Rooms JSON",
-                        Value: fmt.Sprintf("```json\n%v\n```", c.Rooms),
-                        Inline: false,
-                    })
+                    roomValue = fmt.Sprintf("```json\n%v\n```", c.Rooms)
                 } else {
-                    embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-                        Name: "Rooms JSON",
-                        Value: fmt.Sprintf("Rooms JSON is `%v` long which is too big to be attached. Check your `.env` file.", c.Rooms),
-                        Inline: false,
-                    })
+                    roomValue = fmt.Sprintf("Rooms JSON is `%v` long which is too big to be attached. Check your `.env` file.", c.Rooms)
                 }
+
+                embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+                    Name: "Rooms JSON",
+                    Value: roomValue,
+                    Inline: false,
+                })
 
                 _, err = s.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
                     Embeds: []*discordgo.MessageEmbed{embed},
