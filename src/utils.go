@@ -3,7 +3,7 @@ package main
 import (
     "bytes"
     "fmt"
-    "io/ioutil"
+    "io"
     "log"
     "os"
     "os/signal"
@@ -93,7 +93,7 @@ func UpdateStatus(dg *discordgo.Session) {
     }
     defer statusResp.Body.Close()
 
-    statusMessageContent, err := ioutil.ReadAll(statusResp.Body)
+    statusMessageContent, err := io.ReadAll(statusResp.Body)
     if err != nil {
         workingCompanion.Log("Error reading status message: %v", err)
     }

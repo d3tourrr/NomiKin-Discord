@@ -1,8 +1,10 @@
 package main
 
 import (
+    "encoding/base64"
     "regexp"
     "math/rand"
+    "net/url"
     "strings"
     "time"
 
@@ -66,8 +68,8 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
             loopBreak = !companion.Tracker.TrackMessage(m.Author.ID, companion)
         }
 
-        if loopBreak && !(companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS") {
-            // Breaking the loop and don't worry about sending a message to the Nomi Room
+        if loopBreak && !(companion.ChatStyle == "ROOMS") {
+            // Breaking the loop and don't worry about sending a message
             companion.VerboseLog("Loop Prevention active [type: %v | mode: %v], halting reply chain.", companion.CompanionType, companion.ChatStyle)
             return nil
         }
@@ -102,9 +104,9 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
                 }
 
                 if !loopBreak {
-                    canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
+                    canSend := companion.WaitForRoom(companion.NomiRoomObjects[m.ChannelID].Uuid)
                     if canSend {
-                        roomId := companion.RoomObjects[m.ChannelID].Uuid
+                        roomId := companion.NomiRoomObjects[m.ChannelID].Uuid
                         companionReply, err = companion.NomiKin.RequestNomiRoomReply(&roomId, &companion.NomiKin.CompanionId)
                     } else {
                         companion.Log("Error: Waited as long as we could, but room %v was never ready for a message", m.ChannelID)
@@ -117,7 +119,35 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
                 companionReply, err = companion.NomiKin.SendNomiMessage(&updatedMessage)
             }
         case "KINDROID":
-            companionReply, err = companion.NomiKin.SendKindroidMessage(&updatedMessage)
+            if companion.ChatStyle == "ROOMS" {
+                req := ""
+                encoded := url.QueryEscape(m.Author.Username)
+                base64Str := base64.StdEncoding.EncodeToString([]byte(encoded))
+                alphanumeric := strings.Map(func(r rune) rune {
+                    if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+                        return r
+                    }
+                    return -1
+                }, base64Str)
+                if len(alphanumeric) > 32 {
+                    req = alphanumeric[:32]
+                } else {
+                    req = alphanumeric
+                }
+
+                // TODO: Come back and make this something you can set
+                nsfwFilter := bool(false)
+
+                conversation, err := companion.GetConversation(m)
+                
+                companion.Log("Replying: ShareID: %v | Req: %v | Conversation Count: %v | Last Msg: %v", companion.KinShareId, &req, len(*conversation), (*conversation)[0].Text)
+                companionReply, err = companion.NomiKin.SendKindroidDiscordBot(&companion.KinShareId, &nsfwFilter, &req, *conversation)
+                if err != nil {
+                    companion.Log("Error sending message to Kindroid: %v", err)
+                }
+            } else {
+                companionReply, err = companion.NomiKin.SendKindroidMessage(&updatedMessage)
+            }
         }
         if err != nil {
             companion.Log("Error exchanging messages with companion: %v", err)
@@ -187,17 +217,16 @@ func SendMessageToCompanion(m *discordgo.MessageCreate, companion *Companion, bo
 func NomiRoomSend(companion *Companion, m *discordgo.MessageCreate) {
     updatedMessage := UpdateMessage(m, companion)
     sendPrimary := companion.AmIPrimary(m)
-    roomId := companion.RoomObjects[m.ChannelID].Uuid
+    roomId := companion.NomiRoomObjects[m.ChannelID].Uuid
     if sendPrimary {
         // The `status` field on a Room doesn't update quickly enough when more than one Nomi is responding
         // So I'm doing this contrived nonsense to randomize a delay per Nomi, so they hopefully don't overlap
-        rand.Seed(time.Now().UnixNano())
         maxWait := len(companion.GetRoomMembers(m.ChannelID))
         randWait := rand.Intn(maxWait) + rand.Intn(4)
         companion.VerboseLog("Sleeping %v seconds to avoid Nomi Room collision", randWait)
         time.Sleep(time.Second * time.Duration(randWait))
 
-        canSend := companion.WaitForRoom(companion.RoomObjects[m.ChannelID].Uuid)
+        canSend := companion.WaitForRoom(companion.NomiRoomObjects[m.ChannelID].Uuid)
         if canSend {
             _, err := companion.NomiKin.SendNomiRoomMessage(&updatedMessage, &roomId)
             if err != nil {
@@ -226,7 +255,7 @@ func (companion *Companion) HandleMessageCreate(s *discordgo.Session, m *discord
 
     if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" {
         // If we're in Rooms mode, drop messages for which we don't have a room setup for
-        if companion.RoomObjects[m.ChannelID].Uuid == "" {
+        if companion.NomiRoomObjects[m.ChannelID].Uuid == "" {
             return
         }
         

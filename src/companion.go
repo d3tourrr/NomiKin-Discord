@@ -18,6 +18,10 @@ type Companion struct {
     DiscordBotToken string
     CompanionToken  string
     CompanionId     string
+    KinShareId      string
+    KinRandomResponseDefault int
+    KinRoomContextMessages int
+    KinNsfwFilter   bool
     CompanionType   string
     MessagePrefix   string
     ReplyPrefix     string
@@ -36,7 +40,8 @@ type Companion struct {
     Tracker         BotMessageTracker
     Queue           MessageQueue
     DiscordSession  *discordgo.Session
-    RoomObjects     map[string]Room
+    NomiRoomObjects     map[string]NomiRoom
+    KinRoomObjects      map[string]KinRoom
     ShowConfigEnabled bool
 }
 
@@ -76,6 +81,9 @@ func (c *Companion) Setup(envFile string) {
         log.Fatalf("Error reading .env file: %v", err)
     }
 
+    nomiRoomString := ""
+    kinRoomString := ""
+
     for key, value := range envVars {
         switch key {
         case "DISCORD_BOT_TOKEN":
@@ -89,6 +97,23 @@ func (c *Companion) Setup(envFile string) {
                 log.Fatalf("Companion Type must be set to either `NOMI` or `KINDROID`. Your value: '%v'. Set COMPANION_TYPE correctly in %v", value, envFile)
             } else {
                 c.CompanionType = value
+            }
+        case "KIN_SHARE_ID":
+            c.KinShareId = value
+        case "KIN_RANDOM_RESPONSE_DEFAULT":
+            c.KinRandomResponseDefault, err = strconv.Atoi(value)
+            if err != nil {
+                log.Fatalf("KIN_RANDOM_RESPONSE_DEFAULT must be set to a number. Set KIN_RANDOM_RESPONSE_DEFAULT correctly in %v", envFile)
+            }
+        case "KIN_ROOM_CONTEXT_MESSAGES":
+            c.KinRoomContextMessages, err = strconv.Atoi(value)
+            if err != nil {
+                log.Fatalf("KIN_ROOM_CONTEXT_MESSAGES must be set to a number. Set KIN_ROOM_CONTEXT_MESSAGES correctly in %v", envFile)
+            }
+        case "KIN_NSFW_FILTER":
+            c.KinNsfwFilter, err = strconv.ParseBool(value)
+            if err != nil {
+                log.Fatalf("KIN_NSFW_FILTER must be set to either TRUE or FALSE. Set KIN_NSFW_FILTER correctly in %v", envFile)
             }
         case "MESSAGE_PREFIX":
             c.MessagePrefix = value
@@ -142,7 +167,9 @@ func (c *Companion) Setup(envFile string) {
                 c.ChatStyle = "NORMAL"
             }
         case "NOMI_ROOMS":
-            c.Rooms = strings.Trim(value, "'")
+            nomiRoomString = strings.Trim(value, "'")
+        case "KIN_ROOMS":
+            kinRoomString = strings.Trim(value, "'")
         }
     }
 
@@ -176,6 +203,20 @@ func (c *Companion) Setup(envFile string) {
         c.ShowConfigEnabled = true
     }
 
+    if _, exists := envVars["KIN_SHARE_ID"]; !exists && c.CompanionType == "KINDROID" && c.ChatStyle == "ROOMS" {
+        log.Fatalf("KIN_SHARE_ID must be set for KINDROID companions in ROOMS mode. Set KIN_SHARE_ID correctly in %v", envFile)
+    }
+
+    if _, exists := envVars["KIN_RANDOM_RESPONSE_DEFAULT"]; !exists && c.CompanionType == "KINDROID" && c.ChatStyle == "ROOMS" {
+        c.VerboseLog("KIN_RANDOM_RESPONSE_DEFAULT not present in config. Setting default value '10'.")
+        c.KinRandomResponseDefault = 10
+    }
+
+    if _, exists := envVars["KIN_NSFW_FILTER"]; !exists && c.CompanionType == "KINDROID" && c.ChatStyle == "ROOMS" {
+        c.VerboseLog("KIN_NSFW_FILTER not present in config. Setting default value 'TRUE'.")
+        c.KinNsfwFilter = true
+    }
+
     c.NomiKin = NomiKin.NomiKin{
         ApiKey: c.CompanionToken,
         CompanionId: c.CompanionId,
@@ -183,24 +224,23 @@ func (c *Companion) Setup(envFile string) {
 
     c.Tracker = NewBotMessageTracker()
 
-    // For Nomi room
-    if c.CompanionType == "NOMI" {
-        SuppressLogs(func() {
-            c.NomiKin.Init()
-        })
+    SuppressLogs(func() {
+        c.NomiKin.Init(c.CompanionType)
+    })
 
-        if c.ChatStyle == "ROOMS" {
-            roomsString := c.Rooms
-            if roomsString == "" {
-                log.Fatalf("Companion %v is in ROOMS mode but no rooms were provided.", c.CompanionId)
+    if c.ChatStyle == "ROOMS" {
+        if c.CompanionType == "NOMI" {
+            if nomiRoomString == "" {
+                log.Fatalf("Nomi %v is in ROOMS mode but no rooms were provided.", c.CompanionId)
             }
 
-            var rooms []Room
-            if err := json.Unmarshal([]byte(roomsString), &rooms); err != nil {
+            c.Rooms = nomiRoomString
+            var rooms []NomiRoom
+            if err := json.Unmarshal([]byte(nomiRoomString), &rooms); err != nil {
                 log.Fatalf("Companion %v Error parsing NOMI_ROOMS: %v", c.CompanionId, err)
             }
 
-            c.RoomObjects = map[string]Room{}
+            c.NomiRoomObjects = map[string]NomiRoom{}
             for _, room := range rooms {
                 c.VerboseLog("Creating/adding Nomi to room: %v\n  Note: %v\n  Backchanneling: %v\n  RandomResponseChance: %v", room.Name, room.Note, room.Backchanneling, room.RandomResponseChance)
                 if room.RandomResponseChance > 100 || room.RandomResponseChance < 0 {
@@ -212,12 +252,27 @@ func (c *Companion) Setup(envFile string) {
                     c.Log("Error checking if room exists: %v", err)
                 }
 
-                c.RoomObjects[r.Name] = Room{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
+                c.NomiRoomObjects[r.Name] = NomiRoom{Name: r.Name, Note: room.Note, Backchanneling: room.Backchanneling, Uuid: r.Uuid, Nomis: r.Nomis, RandomResponseChance: room.RandomResponseChance}
 
                 if _, exists := RoomPrimaries[r.Name]; !exists {
                     // We are primary
                     c.VerboseLog("Is primary for room %v", r.Name)
                     RoomPrimaries[r.Name] = c.CompanionId
+                }
+            }
+        } else if c.CompanionType == "KINDROID" {
+            if kinRoomString == "" {
+                c.Log("Kindroid %v is in ROOMS mode but no rooms were provided. Every channel will use the default of %v%", c.CompanionId, c.KinRandomResponseDefault)
+            } else {
+                c.Rooms = kinRoomString
+                var rooms []KinRoom
+                if err := json.Unmarshal([]byte(kinRoomString), &rooms); err != nil {
+                    log.Fatalf("Companion %v Error parsing KIN_ROOMS: %v", c.CompanionId, err)
+                }
+
+                c.KinRoomObjects = map[string]KinRoom{}
+                for _, room := range rooms {
+                    c.KinRoomObjects[room.ID] = KinRoom{room.ID, room.RandomResponseChance}
                 }
             }
         }

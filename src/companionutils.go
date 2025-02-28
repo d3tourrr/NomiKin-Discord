@@ -161,14 +161,24 @@ func (companion *Companion) ResponseNeeded(m *discordgo.MessageCreate) (bool, st
         }
     }
 
-    // Is this a Nomi Room? Random chance to respond
-    if companion.CompanionType == "NOMI" && companion.ChatStyle == "ROOMS" && !respondToThis && m.GuildID != "" {
-        rand.Seed(time.Now().UnixNano())
+    // Is this a Room? Random chance to respond
+    if companion.ChatStyle == "ROOMS" && !respondToThis && m.GuildID != "" {
+        chanRandomChance := 0
+        if companion.CompanionType == "NOMI" {
+            chanRandomChance = companion.NomiRoomObjects[m.ChannelID].RandomResponseChance
+        } else if companion.CompanionType == "KINDROID" {
+            if v, ok := companion.KinRoomObjects[m.ChannelID]; ok {
+                chanRandomChance = v.RandomResponseChance
+            } else {
+                chanRandomChance = companion.KinRandomResponseDefault
+            }
+        }
+
         randomValue := rand.Float64() * 100
-        if randomValue < float64(companion.RoomObjects[m.ChannelID].RandomResponseChance) {
+        if randomValue < float64(chanRandomChance) {
             respondToThis = true
             verboseReason = "RandomResponseChance"
-            companion.VerboseLog("Random response chance triggered. RandomResponseChance in channel %v set to %v.", m.ChannelID, float64(companion.RoomObjects[m.ChannelID].RandomResponseChance))
+            companion.VerboseLog("Random response chance triggered. RandomResponseChance in channel %v set to %v.", m.ChannelID, float64(chanRandomChance))
         }
     }
 
@@ -241,4 +251,24 @@ func (c *Companion) GetEligibleEmojis(message string) []string {
     }
 
     return emojis
+}
+
+func (c *Companion) GetConversation(m *discordgo.MessageCreate) (*[]NomiKin.KinConversation, error) {
+    var conversation []NomiKin.KinConversation
+    messages , err := c.DiscordSession.ChannelMessages(m.ChannelID, c.KinRoomContextMessages, "", "", "")
+    if err != nil {
+        c.Log("Error retrieving messages from channel %v: %v", m.ChannelID, err)
+        return nil, err
+    }
+
+    for _, message := range messages {
+        msgContent := message.ContentWithMentionsReplaced()
+        conversation = append(conversation, NomiKin.KinConversation{
+            Username: message.Author.Username,
+            Text: msgContent,
+            Timestamp: message.Timestamp.Format(time.RFC3339),
+        })
+    }
+
+    return &conversation, nil
 }
