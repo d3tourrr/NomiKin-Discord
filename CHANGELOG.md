@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.2
+* Bugfix : Consume a newer version of `NomiKinGo` that fixes a bug where Kindroids in non-`ROOMS` mode could not respond to messages.
+
 ## 0.9.1
 * Feature: "Rooms" mode for Kindroids
   * Kindroids can now be configured to respond to messages in a channel randomly, rather than just when pinged.
